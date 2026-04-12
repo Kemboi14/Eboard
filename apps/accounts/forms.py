@@ -129,6 +129,10 @@ class UserCreationForm(forms.ModelForm):
 
 
 class UserProfileForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['preferred_timezone'].required = False
+
     class Meta:
         model = User
         fields = [
