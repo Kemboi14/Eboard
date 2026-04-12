@@ -52,7 +52,7 @@ class OrganizationListView(LoginRequiredMixin, ListView):
     paginate_by = 20
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role != "it_administrator":
+        if not request.user.is_authenticated or request.user.role != "it_administrator":
             messages.error(request, "You do not have permission to view organizations.")
             return redirect("dashboard")
         return super().dispatch(request, *args, **kwargs)
@@ -92,7 +92,7 @@ class OrganizationDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "organization"
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role != "it_administrator":
+        if not request.user.is_authenticated or request.user.role != "it_administrator":
             messages.error(request, "Access denied.")
             return redirect("dashboard")
         return super().dispatch(request, *args, **kwargs)
@@ -131,7 +131,7 @@ class OrganizationCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy("agencies:organization_list")
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role != "it_administrator":
+        if not request.user.is_authenticated or request.user.role != "it_administrator":
             messages.error(request, "Only IT Administrators can create organizations.")
             return redirect("dashboard")
         return super().dispatch(request, *args, **kwargs)
@@ -157,7 +157,7 @@ class OrganizationUpdateView(LoginRequiredMixin, UpdateView):
     success_url = reverse_lazy("agencies:organization_list")
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role != "it_administrator":
+        if not request.user.is_authenticated or request.user.role != "it_administrator":
             messages.error(request, "Only IT Administrators can edit organizations.")
             return redirect("dashboard")
         return super().dispatch(request, *args, **kwargs)
@@ -361,7 +361,7 @@ class BranchCreateView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy("agencies:branch_list")
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role != "it_administrator":
+        if not request.user.is_authenticated or request.user.role != "it_administrator":
             messages.error(request, "Only IT Administrators can create branches.")
             return redirect("agencies:branch_list")
         return super().dispatch(request, *args, **kwargs)
@@ -390,7 +390,7 @@ class BranchUpdateView(LoginRequiredMixin, UpdateView):
     template_name = "agencies/branch_form.html"
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role != "it_administrator":
+        if not request.user.is_authenticated or request.user.role != "it_administrator":
             messages.error(request, "Only IT Administrators can edit branches.")
             return redirect("agencies:branch_list")
         return super().dispatch(request, *args, **kwargs)
@@ -414,7 +414,7 @@ class BranchUpdateView(LoginRequiredMixin, UpdateView):
 @login_required
 def toggle_branch_active(request, pk):
     """Deactivate or reactivate a branch (IT admin only)."""
-    if request.user.role != "it_administrator":
+    if not request.user.is_authenticated or request.user.role != "it_administrator":
         messages.error(request, "Only IT Administrators can deactivate branches.")
         return redirect("agencies:branch_detail", pk=pk)
 
@@ -606,7 +606,7 @@ class CommitteeCreateView(LoginRequiredMixin, CreateView):
     template_name = "agencies/committee_form.html"
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role not in ["it_administrator", "company_secretary"]:
+        if not request.user.is_authenticated or request.user.role not in ["it_administrator", "company_secretary"]:
             messages.error(request, "You do not have permission to create committees.")
             return redirect("agencies:committee_list")
         return super().dispatch(request, *args, **kwargs)
@@ -640,7 +640,7 @@ class CommitteeUpdateView(LoginRequiredMixin, UpdateView):
     template_name = "agencies/committee_form.html"
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role not in ["it_administrator", "company_secretary"]:
+        if not request.user.is_authenticated or request.user.role not in ["it_administrator", "company_secretary"]:
             messages.error(request, "You do not have permission to edit committees.")
             return redirect("agencies:committee_list")
         return super().dispatch(request, *args, **kwargs)
@@ -674,7 +674,7 @@ def manage_branch_members(request, branch_pk):
     """Add / remove users from a branch."""
     branch = get_object_or_404(Branch, pk=branch_pk)
 
-    if request.user.role not in ["it_administrator", "company_secretary"]:
+    if not request.user.is_authenticated or request.user.role not in ["it_administrator", "company_secretary"]:
         messages.error(request, "You do not have permission to manage branch members.")
         return redirect("agencies:branch_detail", pk=branch_pk)
 
@@ -726,7 +726,7 @@ def toggle_branch_membership(request, membership_pk):
     """Activate or deactivate a branch membership."""
     membership = get_object_or_404(UserBranchMembership, pk=membership_pk)
 
-    if request.user.role not in ["it_administrator", "company_secretary"]:
+    if not request.user.is_authenticated or request.user.role not in ["it_administrator", "company_secretary"]:
         messages.error(request, "Permission denied.")
         return redirect("agencies:branch_detail", pk=membership.branch.pk)
 
@@ -764,7 +764,7 @@ def manage_committee_members(request, committee_pk):
     """Add / remove members from a committee."""
     committee = get_object_or_404(Committee, pk=committee_pk)
 
-    if request.user.role not in ["it_administrator", "company_secretary"]:
+    if not request.user.is_authenticated or request.user.role not in ["it_administrator", "company_secretary"]:
         messages.error(
             request, "You do not have permission to manage committee members."
         )
@@ -822,7 +822,7 @@ def toggle_committee_membership(request, membership_pk):
     """Activate or deactivate a committee membership."""
     membership = get_object_or_404(CommitteeMembership, pk=membership_pk)
 
-    if request.user.role not in ["it_administrator", "company_secretary"]:
+    if not request.user.is_authenticated or request.user.role not in ["it_administrator", "company_secretary"]:
         messages.error(request, "Permission denied.")
         return redirect("agencies:committee_detail", pk=membership.committee.pk)
 
@@ -850,7 +850,7 @@ def send_invitation(request, branch_pk):
     """Send an email invitation to join a branch."""
     branch = get_object_or_404(Branch, pk=branch_pk)
 
-    if request.user.role not in ["it_administrator", "company_secretary"]:
+    if not request.user.is_authenticated or request.user.role not in ["it_administrator", "company_secretary"]:
         messages.error(request, "You do not have permission to send invitations.")
         return redirect("agencies:branch_detail", pk=branch_pk)
 
@@ -886,7 +886,7 @@ def invitation_list(request, branch_pk):
     """List all invitations for a branch."""
     branch = get_object_or_404(Branch, pk=branch_pk)
 
-    if request.user.role not in ["it_administrator", "company_secretary"]:
+    if not request.user.is_authenticated or request.user.role not in ["it_administrator", "company_secretary"]:
         messages.error(request, "Permission denied.")
         return redirect("agencies:branch_detail", pk=branch_pk)
 
@@ -1000,7 +1000,7 @@ def revoke_invitation(request, invitation_pk):
     """Revoke a pending invitation."""
     invitation = get_object_or_404(BranchInvitation, pk=invitation_pk)
 
-    if request.user.role not in ["it_administrator", "company_secretary"]:
+    if not request.user.is_authenticated or request.user.role not in ["it_administrator", "company_secretary"]:
         messages.error(request, "Permission denied.")
         return redirect("agencies:branch_detail", pk=invitation.branch.pk)
 
@@ -1244,7 +1244,7 @@ def user_branches_api(request):
 @login_required
 def global_org_tree_api(request):
     """JSON endpoint — full org/branch/committee tree for IT admins."""
-    if request.user.role != "it_administrator":
+    if not request.user.is_authenticated or request.user.role != "it_administrator":
         return JsonResponse({"error": "Access denied"}, status=403)
 
     orgs = Organization.objects.filter(is_active=True).prefetch_related(

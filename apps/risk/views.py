@@ -149,6 +149,27 @@ class CreateRiskView(LoginRequiredMixin, CreateView):
         return response
 
 
+class UpdateRiskView(LoginRequiredMixin, UpdateView):
+    """Update view for existing risks"""
+
+    model = Risk
+    form_class = RiskForm
+    template_name = "risk/create_risk.html"
+    success_url = reverse_lazy("risk:risk_list")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = f"Update Risk: {self.object.title}"
+        context["is_update"] = True
+        return context
+
+    def form_valid(self, form):
+        """Update risk and recalculate score"""
+        form.save()
+        messages.success(self.request, "Risk updated successfully!")
+        return super().form_valid(form)
+
+
 @role_required("compliance_officer", "executive_management", "it_administrator")
 def manage_categories(request):
     """Manage risk categories"""

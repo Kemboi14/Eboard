@@ -1,0 +1,130 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="mb-6">
+    <a href="{% url 'organization:branch_list' %}" 
+       class="text-sm font-medium" style="color: #7dc143;">
+      ← Back to Branches
+    </a>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Content -->
+    <div class="lg:col-span-2">
+      <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <div class="flex justify-between items-start mb-6">
+          <div>
+            <h1 class="text-2xl font-bold" style="color: #2d1b5e;">{{ branch.name }}</h1>
+            <p class="text-gray-500">{{ branch.code }}</p>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-medium
+            {% if branch.status == 'active' %}bg-green-100 text-green-800
+            {% elif branch.status == 'inactive' %}bg-gray-100 text-gray-800
+            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+            {{ branch.status|title }}
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 class="text-sm font-semibold text-gray-500 mb-2">Location</h3>
+            <p class="text-gray-900">{{ branch.city|default:'N/A' }}, {{ branch.country }}</p>
+            <p class="text-gray-900">{{ branch.address|default:'N/A' }}</p>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold text-gray-500 mb-2">Contact</h3>
+            <p class="text-gray-900">{{ branch.phone|default:'Not provided' }}</p>
+            <p class="text-gray-900">{{ branch.email|default:'Not provided' }}</p>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold text-gray-500 mb-2">Branch Information</h3>
+            <p class="text-gray-900">Type: {{ branch.get_branch_type_display }}</p>
+            <p class="text-gray-900">Members: {{ branch.total_members }}</p>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold text-gray-500 mb-2">System</h3>
+            <p class="text-gray-900">Created: {{ branch.created_at|date:"M d, Y" }}</p>
+            <p class="text-gray-900">Updated: {{ branch.updated_at|date:"M d, Y" }}</p>
+          </div>
+        </div>
+
+        {% if can_edit %}
+        <div class="mt-6 pt-6 border-t flex justify-end space-x-4">
+          <a href="{% url 'organization:branch_update' branch.pk %}" 
+             class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+            Edit Branch
+          </a>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Committees in this branch -->
+      {% if committees %}
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="text-xl font-semibold mb-4" style="color: #2d1b5e;">Committees in this Branch</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {% for committee in committees %}
+          <div class="border rounded-lg p-4">
+            <h3 class="font-semibold" style="color: #2d1b5e;">{{ committee.name }}</h3>
+            <p class="text-sm text-gray-500">{{ committee.code }}</p>
+            <p class="text-sm text-gray-600 mt-2">Members: {{ committee.active_member_count }}</p>
+            <a href="{% url 'organization:committee_detail' committee.pk %}" 
+               class="text-sm font-medium mt-2 inline-block" style="color: #7dc143;">
+              View Committee →
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div>
+      <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <h3 class="text-lg font-semibold mb-4" style="color: #2d1b5e;">Quick Actions</h3>
+        <div class="space-y-3">
+          {% if can_edit %}
+          <a href="{% url 'organization:branch_update' branch.pk %}" 
+             class="block px-4 py-2 rounded-lg text-center text-gray-700 hover:bg-gray-50 border border-gray-300">
+            Edit Branch
+          </a>
+          <a href="{% url 'organization:committee_create' %}?branch={{ branch.pk }}" 
+             class="block px-4 py-2 rounded-lg text-center text-white"
+             style="background-color: #7dc143;">
+            Create Committee
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h3 class="text-lg font-semibold mb-4" style="color: #2d1b5e;">Statistics</h3>
+        <div class="space-y-3">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Total Members</span>
+            <span class="font-semibold">{{ branch.total_members }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Committees</span>
+            <span class="font-semibold">{{ committees|length }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Status</span>
+            <span class="font-semibold">{{ branch.status|title }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

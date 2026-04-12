@@ -1,0 +1,215 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="mb-6">
+    <a href="{% url 'organization:committee_list' %}" 
+       class="text-sm font-medium" style="color: #7dc143;">
+      ← Back to Committees
+    </a>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Content -->
+    <div class="lg:col-span-2">
+      <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <div class="flex justify-between items-start mb-6">
+          <div>
+            <h1 class="text-2xl font-bold" style="color: #2d1b5e;">{{ committee.name }}</h1>
+            <p class="text-gray-500">{{ committee.code }}</p>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-medium
+            {% if committee.status == 'active' %}bg-green-100 text-green-800
+            {% elif committee.status == 'inactive' %}bg-gray-100 text-gray-800
+            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+            {{ committee.status|title }}
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 class="text-sm font-semibold text-gray-500 mb-2">Committee Information</h3>
+            <p class="text-gray-900"><strong>Type:</strong> {{ committee.get_committee_type_display }}</p>
+            <p class="text-gray-900"><strong>Meeting Frequency:</strong> {{ committee.meeting_frequency }}</p>
+            {% if committee.branch %}
+            <p class="text-gray-900"><strong>Branch:</strong> {{ committee.branch.name }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold text-gray-500 mb-2">Leadership</h3>
+            <p class="text-gray-900"><strong>Chairperson:</strong> {{ committee.chairperson.get_full_name|default:'Not assigned' }}</p>
+            <p class="text-gray-900"><strong>Secretary:</strong> {{ committee.secretary.get_full_name|default:'Not assigned' }}</p>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold text-gray-500 mb-2">Statistics</h3>
+            <p class="text-gray-900"><strong>Total Members:</strong> {{ committee.active_member_count }}</p>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold text-gray-500 mb-2">System</h3>
+            <p class="text-gray-900">Created: {{ committee.created_at|date:"M d, Y" }}</p>
+            <p class="text-gray-900">Updated: {{ committee.updated_at|date:"M d, Y" }}</p>
+          </div>
+        </div>
+
+        {% if committee.description %}
+        <div class="mt-6 pt-6 border-t">
+          <h3 class="text-sm font-semibold text-gray-500 mb-2">Description</h3>
+          <p class="text-gray-900">{{ committee.description }}</p>
+        </div>
+        {% endif %}
+
+        <div class="mt-6 pt-6 border-t">
+          <h3 class="text-sm font-semibold text-gray-500 mb-2">Committee Mandate</h3>
+          <p class="text-gray-900">{{ committee.mandate }}</p>
+        </div>
+
+        {% if can_edit %}
+        <div class="mt-6 pt-6 border-t flex justify-end space-x-4">
+          <a href="{% url 'organization:committee_update' committee.pk %}" 
+             class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+            Edit Committee
+          </a>
+          <a href="{% url 'organization:committee_add_member' committee.pk %}" 
+             class="px-4 py-2 rounded-lg text-white"
+             style="background-color: #7dc143;">
+            Add Member
+          </a>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Committee Members -->
+      {% if members %}
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="text-xl font-semibold mb-4" style="color: #2d1b5e;">Committee Members</h2>
+        <div class="space-y-4">
+          {% for member in members %}
+          <div class="border rounded-lg p-4 flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+              {% if member.user.profile_photo %}
+              <img src="{{ member.user.profile_photo.url }}" alt="{{ member.user.get_full_name }}" 
+                   class="w-12 h-12 rounded-full object-cover">
+              {% else %}
+              <div class="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white"
+                   style="background:#7dc143;">
+                {{ member.user.first_name|slice:":1" }}{{ member.user.last_name|slice:":1" }}
+              </div>
+              {% endif %}
+              <div>
+                <h3 class="font-semibold" style="color: #2d1b5e;">{{ member.user.get_full_name }}</h3>
+                <p class="text-sm text-gray-500">{{ member.user.email }}</p>
+                <p class="text-sm text-gray-600">{{ member.user.get_role_display }}</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="px-3 py-1 rounded-full text-xs font-medium
+                {% if member.committee_role == 'chairperson' %}bg-purple-100 text-purple-800
+                {% elif member.committee_role == 'secretary' %}bg-blue-100 text-blue-800
+                {% elif member.committee_role == 'observer' %}bg-gray-100 text-gray-800
+                {% else %}bg-green-100 text-green-800{% endif %}">
+                {{ member.get_committee_role_display }}
+              </span>
+              {% if can_edit %}
+              <div class="mt-2">
+                <a href="{% url 'organization:committee_remove_member' committee.pk member.pk %}" 
+                   class="text-xs text-red-600 hover:text-red-800">
+                  Remove
+                </a>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="text-xl font-semibold mb-4" style="color: #2d1b5e;">Committee Members</h2>
+        <div class="text-center py-8">
+          <p class="text-gray-500">No members added yet.</p>
+          {% if can_edit %}
+          <a href="{% url 'organization:committee_add_member' committee.pk %}" 
+             class="mt-4 inline-block px-4 py-2 rounded-lg text-white"
+             style="background-color: #7dc143;">
+            Add First Member
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Sub-Committees -->
+    {% if committee.sub_committees.all %}
+    <div class="lg:col-span-2">
+      <div class="bg-white rounded-xl shadow-sm p-6 mt-6">
+        <h2 class="text-xl font-semibold mb-4" style="color: #2d1b5e;">Sub-Committees</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {% for sub_committee in committee.sub_committees.all %}
+          <div class="border rounded-lg p-4">
+            <h3 class="font-semibold" style="color: #2d1b5e;">{{ sub_committee.name }}</h3>
+            <p class="text-sm text-gray-500">{{ sub_committee.code }}</p>
+            <p class="text-sm text-gray-600 mt-2">Members: {{ sub_committee.active_member_count }}</p>
+            <a href="{% url 'organization:committee_detail' sub_committee.pk %}" 
+               class="text-sm font-medium mt-2 inline-block" style="color: #7dc143;">
+              View Sub-Committee →
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Sidebar -->
+    <div>
+      <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <h3 class="text-lg font-semibold mb-4" style="color: #2d1b5e;">Quick Actions</h3>
+        <div class="space-y-3">
+          {% if can_edit %}
+          <a href="{% url 'organization:committee_update' committee.pk %}" 
+             class="block px-4 py-2 rounded-lg text-center text-gray-700 hover:bg-gray-50 border border-gray-300">
+            Edit Committee
+          </a>
+          <a href="{% url 'organization:committee_add_member' committee.pk %}" 
+             class="block px-4 py-2 rounded-lg text-center text-white"
+             style="background-color: #7dc143;">
+            Add Member
+          </a>
+          <a href="{% url 'organization:committee_create' %}?parent_committee={{ committee.pk }}" 
+             class="block px-4 py-2 rounded-lg text-center text-gray-700 hover:bg-gray-50 border border-gray-300">
+            Create Sub-Committee
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h3 class="text-lg font-semibold mb-4" style="color: #2d1b5e;">Statistics</h3>
+        <div class="space-y-3">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Total Members</span>
+            <span class="font-semibold">{{ committee.active_member_count }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Status</span>
+            <span class="font-semibold">{{ committee.status|title }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Type</span>
+            <span class="font-semibold">{{ committee.get_committee_type_display }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -80,9 +80,22 @@ def ProfileView(request):
     if request.method == 'POST':
         form = UserProfileForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Profile updated successfully!')
-            return redirect('accounts:profile')
+            try:
+                # Check if profile_photo is in the files
+                if 'profile_photo' in request.FILES:
+                    messages.info(request, f'File received: {request.FILES["profile_photo"].name}')
+                else:
+                    messages.info(request, 'No file received in request.FILES')
+                
+                form.save()
+                messages.success(request, 'Profile updated successfully!')
+                return redirect('accounts:profile')
+            except Exception as e:
+                messages.error(request, f'Error saving profile: {str(e)}')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
     else:
         form = UserProfileForm(instance=request.user)
     

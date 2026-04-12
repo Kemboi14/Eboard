@@ -277,8 +277,12 @@
               <a href="{% url 'risk:risk_detail' risk.id %}"
                  class="text-blue-600 hover:text-blue-900 mr-3">View</a>
               {% if can_manage %}
-              <a href="#" class="text-green-600 hover:text-green-900 mr-3">Assess</a>
-              <a href="#" class="text-purple-600 hover:text-purple-900">Mitigate</a>
+              <a href="{% url 'risk:update_risk' risk.id %}"
+                 class="text-gray-600 hover:text-gray-900 mr-3">Edit</a>
+              <a href="{% url 'risk:create_assessment' risk.id %}"
+                 class="text-green-600 hover:text-green-900 mr-3">Assess</a>
+              <a href="{% url 'risk:create_mitigation' risk.id %}"
+                 class="text-purple-600 hover:text-purple-900">Mitigate</a>
               {% endif %}
             </td>
           </tr>

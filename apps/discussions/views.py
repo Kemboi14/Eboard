@@ -83,32 +83,63 @@ class ForumDetailView(LoginRequiredMixin, DetailView):
     template_name = "discussions/forum_detail.html"
     context_object_name = "forum"
 
+    def get(self, request, *args, **kwargs):
+        try:
+            forum_id = kwargs.get('pk')
+            print(f"ForumDetailView called with pk: {forum_id}")
+            forum = DiscussionForum.objects.filter(pk=forum_id).first()
+            if not forum:
+                return HttpResponse(f"Forum not found: {forum_id}", status=404)
+            print(f"Forum found: {forum.name}")
+            response = super().get(request, *args, **kwargs)
+            print(f"Response status: {response.status_code}")
+            return response
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"ForumDetailView error: {str(e)}", exc_info=True)
+            from django.http import HttpResponse
+            return HttpResponse(f"Error loading forum: {str(e)}", status=500)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         forum = self.object
+        print(f"get_context_data called, forum: {forum}")
 
-        # Get threads for this forum
-        threads = (
-            forum.threads.select_related("author")
-            .prefetch_related("thread_tags__tag")
-            .order_by("-is_pinned", "-last_activity")
-        )
-
-        # Apply filters
-        search = self.request.GET.get("search")
-        if search:
-            threads = threads.filter(
-                Q(title__icontains=search) | Q(content__icontains=search)
+        try:
+            # Get threads for this forum
+            threads = (
+                forum.threads.select_related("author")
+                .prefetch_related("thread_tags__tag")
+                .order_by("-is_pinned", "-last_activity")
             )
+            print(f"Threads count: {threads.count()}")
 
-        # Pagination
-        paginator = Paginator(threads, 20)
-        page_number = self.request.GET.get("page")
-        page_obj = paginator.get_page(page_number)
+            # Apply filters
+            search = self.request.GET.get("search")
+            if search:
+                threads = threads.filter(
+                    Q(title__icontains=search) | Q(content__icontains=search)
+                )
 
-        context["page_obj"] = page_obj
-        context["threads"] = page_obj
-        context["search_form"] = DiscussionSearchForm(self.request.GET)
+            # Pagination
+            paginator = Paginator(threads, 20)
+            page_number = self.request.GET.get("page")
+            page_obj = paginator.get_page(page_number)
+
+            context["page_obj"] = page_obj
+            context["threads"] = page_obj.object_list
+            context["is_paginated"] = page_obj.has_other_pages()
+            context["search_form"] = DiscussionSearchForm(self.request.GET)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"ForumDetailView context error: {str(e)}", exc_info=True)
+            # Log error and provide empty context
+            context["threads"] = []
+            context["page_obj"] = None
+            context["is_paginated"] = False
+            context["search_form"] = DiscussionSearchForm(self.request.GET)
 
         return context
 

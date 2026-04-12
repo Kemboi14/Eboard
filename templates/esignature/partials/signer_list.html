@@ -1,10 +1,4 @@
 {% load static %}
-{# ─── partials/signer_list.html ──────────────────────────────────────────────
-   Rendered inline on document_detail.html AND polled/refreshed via HTMX.
-   Context:
-     document    — SignableDocument instance (with .signers prefetched)
-     can_manage  — bool: whether the current user may manage this document
-#}
 
 <div class="overflow-x-auto">
   {% with signers=document.signers.all %}

@@ -1,0 +1,80 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Committee Management{% endblock %}
+
+{% block page_title %}Committee Management{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="bg-white rounded-xl shadow-sm p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold" style="color: #2d1b5e;">Committees</h1>
+      {% if can_create %}
+      <a href="{% url 'organization:committee_create' %}" 
+         class="px-4 py-2 rounded-lg text-white font-medium transition-colors"
+         style="background-color: #7dc143;"
+         onmouseover="this.style.backgroundColor='#5a8a3c'"
+         onmouseout="this.style.backgroundColor='#7dc143'">
+        + Create Committee
+      </a>
+      {% endif %}
+    </div>
+
+    {% if committees %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for committee in committees %}
+      <div class="border rounded-lg p-6 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-lg font-semibold" style="color: #2d1b5e;">{{ committee.name }}</h3>
+            <p class="text-sm text-gray-500">{{ committee.code }}</p>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-medium
+            {% if committee.status == 'active' %}bg-green-100 text-green-800
+            {% elif committee.status == 'inactive' %}bg-gray-100 text-gray-800
+            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+            {{ committee.status|title }}
+          </span>
+        </div>
+        
+        <div class="space-y-2 text-sm text-gray-600">
+          <p><strong>Type:</strong> {{ committee.get_committee_type_display }}</p>
+          <p><strong>Chairperson:</strong> {{ committee.chairperson.get_full_name|default:'Not assigned' }}</p>
+          <p><strong>Members:</strong> {{ committee.active_member_count }}</p>
+          <p><strong>Branch:</strong> {{ committee.branch.name|default:'Not assigned' }}</p>
+          {% if committee.parent_committee %}
+          <p><strong>Parent:</strong> {{ committee.parent_committee.name }}</p>
+          {% endif %}
+        </div>
+        
+        <div class="mt-4 pt-4 border-t">
+          <a href="{% url 'organization:committee_detail' committee.pk %}" 
+             class="text-sm font-medium" style="color: #7dc143;">
+            View Details →
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+      </svg>
+      <h3 class="mt-2 text-sm font-medium text-gray-900">No committees yet</h3>
+      <p class="mt-1 text-sm text-gray-500">Get started by creating your first committee.</p>
+      {% if can_create %}
+      <div class="mt-6">
+        <a href="{% url 'organization:committee_create' %}" 
+           class="px-4 py-2 rounded-lg text-white font-medium"
+           style="background-color: #7dc143;">
+          Create Committee
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

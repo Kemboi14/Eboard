@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "apps.discussions",
     "apps.notifications",
     "apps.analytics",
+    "apps.organization",
 ]
 
 # ---------------------------------------------------------------------------

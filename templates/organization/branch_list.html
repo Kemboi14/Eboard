@@ -1,0 +1,76 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Branch Management{% endblock %}
+
+{% block page_title %}Branch Management{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="bg-white rounded-xl shadow-sm p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold" style="color: #2d1b5e;">Branches</h1>
+      {% if can_create %}
+      <a href="{% url 'organization:branch_create' %}" 
+         class="px-4 py-2 rounded-lg text-white font-medium transition-colors"
+         style="background-color: #7dc143;"
+         onmouseover="this.style.backgroundColor='#5a8a3c'"
+         onmouseout="this.style.backgroundColor='#7dc143'">
+        + Create Branch
+      </a>
+      {% endif %}
+    </div>
+
+    {% if branches %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for branch in branches %}
+      <div class="border rounded-lg p-6 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-lg font-semibold" style="color: #2d1b5e;">{{ branch.name }}</h3>
+            <p class="text-sm text-gray-500">{{ branch.code }}</p>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-medium
+            {% if branch.status == 'active' %}bg-green-100 text-green-800
+            {% elif branch.status == 'inactive' %}bg-gray-100 text-gray-800
+            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+            {{ branch.status|title }}
+          </span>
+        </div>
+        
+        <div class="space-y-2 text-sm text-gray-600">
+          <p><strong>Location:</strong> {{ branch.city|default:'N/A' }}, {{ branch.country }}</p>
+          <p><strong>Type:</strong> {{ branch.get_branch_type_display }}</p>
+          <p><strong>Members:</strong> {{ branch.total_members }}</p>
+        </div>
+        
+        <div class="mt-4 pt-4 border-t">
+          <a href="{% url 'organization:branch_detail' branch.pk %}" 
+             class="text-sm font-medium" style="color: #7dc143;">
+            View Details →
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+      </svg>
+      <h3 class="mt-2 text-sm font-medium text-gray-900">No branches yet</h3>
+      <p class="mt-1 text-sm text-gray-500">Get started by creating your first branch.</p>
+      {% if can_create %}
+      <div class="mt-6">
+        <a href="{% url 'organization:branch_create' %}" 
+           class="px-4 py-2 rounded-lg text-white font-medium"
+           style="background-color: #7dc143;">
+          Create Branch
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

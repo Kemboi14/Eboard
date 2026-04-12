@@ -168,7 +168,8 @@ class UserProfileForm(forms.ModelForm):
             ),
             "profile_photo": forms.FileInput(
                 attrs={
-                    "class": "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    "class": "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent",
+                    "accept": "image/*"
                 }
             ),
             "preferred_timezone": forms.Select(
@@ -182,7 +183,25 @@ class UserProfileForm(forms.ModelForm):
         }
         help_texts = {
             "preferred_timezone": "Meeting times will be displayed in this timezone across the platform.",
+            "profile_photo": "Upload a professional headshot. Recommended size: 200x200px. Max size: 5MB.",
         }
+
+    def clean_profile_photo(self):
+        photo = self.cleaned_data.get('profile_photo')
+        if photo:
+            # Check file size (5MB max)
+            if photo.size > 5 * 1024 * 1024:
+                raise forms.ValidationError("Image file is too large. Maximum size is 5MB.")
+            
+            # Check file type
+            valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+            import os
+            ext = os.path.splitext(photo.name)[1].lower()
+            if ext not in valid_extensions:
+                raise forms.ValidationError("Invalid image format. Please upload a JPG, PNG, GIF, or WebP file.")
+            
+            return photo
+        return None
 
 
 class CustomPasswordChangeForm(forms.Form):

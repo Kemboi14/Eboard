@@ -10,7 +10,7 @@ CAN_VOTE = ['board_member', 'company_secretary', 'executive_management', 'it_adm
 VIEW_AUDIT = ['internal_audit', 'it_administrator', 'compliance_officer']
 
 # Risk management
-MANAGE_RISK = ['compliance_officer', 'executive_management']
+MANAGE_RISK = ['compliance_officer', 'executive_management', 'it_administrator']
 
 # Policy management
 MANAGE_POLICIES = ['compliance_officer', 'company_secretary', 'it_administrator']

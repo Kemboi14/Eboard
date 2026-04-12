@@ -1,0 +1,175 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="bg-white rounded-xl shadow-sm p-6">
+    <h1 class="text-2xl font-bold mb-6" style="color: #2d1b5e;">{{ title }}</h1>
+    
+    <form method="post" class="space-y-6">
+      {% csrf_token %}
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Branch *</label>
+        <select name="branch" 
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+          <option value="">Select Branch</option>
+          {% for branch in branches %}
+          <option value="{{ branch.id }}" 
+                  {% if committee and committee.branch == branch %}selected{% endif %}>
+            {{ branch.name }} ({{ branch.code }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Committee Name *</label>
+          <input type="text" 
+                 name="name" 
+                 required
+                 value="{% if committee %}{{ committee.name }}{% endif %}"
+                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                 placeholder="e.g., Board Development Committee">
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Committee Code *</label>
+          <input type="text" 
+                 name="code" 
+                 required
+                 value="{% if committee %}{{ committee.code }}{% endif %}"
+                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 uppercase"
+                 placeholder="e.g., BDC">
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Committee Type *</label>
+          <select name="committee_type" 
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="board_of_directors" {% if committee and committee.committee_type == 'board_of_directors' %}selected{% endif %}>Board of Directors</option>
+            <option value="executive_committee" {% if committee and committee.committee_type == 'executive_committee' %}selected{% endif %}>Executive Committee</option>
+            <option value="audit_committee" {% if committee and committee.committee_type == 'audit_committee' %}selected{% endif %}>Audit Committee</option>
+            <option value="risk_committee" {% if committee and committee.committee_type == 'risk_committee' %}selected{% endif %}>Risk & Compliance Committee</option>
+            <option value="finance_committee" {% if committee and committee.committee_type == 'finance_committee' %}selected{% endif %}>Finance Committee</option>
+            <option value="remuneration_committee" {% if committee and committee.committee_type == 'remuneration_committee' %}selected{% endif %}>Remuneration Committee</option>
+            <option value="nomination_committee" {% if committee and committee.committee_type == 'nomination_committee' %}selected{% endif %}>Nomination Committee</option>
+            <option value="investment_committee" {% if committee and committee.committee_type == 'investment_committee' %}selected{% endif %}>Investment Committee</option>
+            <option value="strategy_committee" {% if committee and committee.committee_type == 'strategy_committee' %}selected{% endif %}>Strategy Committee</option>
+            <option value="governance_committee" {% if committee and committee.committee_type == 'governance_committee' %}selected{% endif %}>Governance Committee</option>
+            <option value="technical_committee" {% if committee and committee.committee_type == 'technical_committee' %}selected{% endif %}>Technical Committee</option>
+            <option value="special_committee" {% if committee and committee.committee_type == 'special_committee' %}selected{% endif %}>Special / Ad-hoc Committee</option>
+            <option value="subsidiary_board" {% if committee and committee.committee_type == 'subsidiary_board' %}selected{% endif %}>Subsidiary Board</option>
+            <option value="other" {% if committee and committee.committee_type == 'other' %}selected{% endif %}>Other</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+          <select name="status" 
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="active" {% if committee and committee.status == 'active' %}selected{% endif %}>Active</option>
+            <option value="inactive" {% if committee and committee.status == 'inactive' %}selected{% endif %}>Inactive</option>
+            <option value="dissolved" {% if committee and committee.status == 'dissolved' %}selected{% endif %}>Dissolved</option>
+            <option value="under_review" {% if committee and committee.status == 'under_review' %}selected{% endif %}>Under Review</option>
+          </select>
+        </div>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+        <textarea name="description" 
+                  rows="3"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Brief description of the committee">{% if committee %}{{ committee.description }}{% endif %}</textarea>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Committee Mandate *</label>
+        <textarea name="mandate" 
+                  required
+                  rows="4"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="The committee's mandate and responsibilities">{% if committee %}{{ committee.mandate }}{% endif %}</textarea>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Meeting Frequency</label>
+        <input type="text" 
+               name="meeting_frequency" 
+               value="{% if committee %}{{ committee.meeting_frequency }}{% else %}Monthly{% endif %}"
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+               placeholder="e.g., Monthly, Quarterly">
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Parent Committee (Optional)</label>
+        <select name="parent_committee" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+          <option value="">Select Parent Committee (creates sub-committee)</option>
+          {% for parent_committee in potential_parent_committees %}
+          <option value="{{ parent_committee.id }}" 
+                  {% if committee and committee.parent_committee == parent_committee %}selected{% endif %}
+                  {% if selected_parent_committee and selected_parent_committee == parent_committee %}selected{% endif %}>
+            {{ parent_committee.name }} ({{ parent_committee.code }})
+          </option>
+          {% endfor %}
+        </select>
+        <p class="text-xs text-gray-500 mt-1">Select a parent committee to create this as a sub-committee</p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Chairperson</label>
+          <select name="chairperson" 
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="">Select Chairperson</option>
+            {% for member in potential_members %}
+            <option value="{{ member.id }}" 
+                    {% if committee and committee.chairperson == member %}selected{% endif %}>
+              {{ member.get_full_name }} ({{ member.get_role_display }})
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Secretary</label>
+          <select name="secretary" 
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+            <option value="">Select Secretary</option>
+            {% for member in potential_members %}
+            <option value="{{ member.id }}" 
+                    {% if committee and committee.secretary == member %}selected{% endif %}>
+              {{ member.get_full_name }} ({{ member.get_role_display }})
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      
+      <div class="flex justify-end space-x-4">
+        <a href="{% if committee %}{% url 'organization:committee_detail' committee.pk %}{% else %}{% url 'organization:committee_list' %}{% endif %}" 
+           class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+          Cancel
+        </a>
+        <button type="submit" 
+                class="px-6 py-2 rounded-lg text-white font-medium"
+                style="background-color: #7dc143;"
+                onmouseover="this.style.backgroundColor='#5a8a3c'"
+                onmouseout="this.style.backgroundColor='#7dc143'">
+          {% if committee %}Update Committee{% else %}Create Committee{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

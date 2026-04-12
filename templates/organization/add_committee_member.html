@@ -1,0 +1,71 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="mb-6">
+    <a href="{% url 'organization:committee_detail' committee.pk %}" 
+       class="text-sm font-medium" style="color: #7dc143;">
+      ← Back to Committee
+    </a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm p-6">
+    <h1 class="text-2xl font-bold mb-6" style="color: #2d1b5e;">{{ title }}</h1>
+    
+    <p class="text-gray-600 mb-6">Add a member to {{ committee.name }}</p>
+    
+    <form method="post" class="space-y-6">
+      {% csrf_token %}
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Select User *</label>
+        <select name="user" 
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+          <option value="">Choose a user to add</option>
+          {% for member in potential_members %}
+          <option value="{{ member.id }}">
+            {{ member.get_full_name }} ({{ member.email }}) - {{ member.get_role_display }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Role *</label>
+        <select name="committee_role" 
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+          <option value="member">Member</option>
+          <option value="chairperson">Chairperson</option>
+          <option value="vice_chairperson">Vice Chairperson</option>
+          <option value="secretary">Secretary</option>
+          <option value="treasurer">Treasurer</option>
+          <option value="observer">Observer</option>
+          <option value="advisor">Advisor / Consultant</option>
+          <option value="alternate">Alternate Member</option>
+        </select>
+      </div>
+      
+      <div class="flex justify-end space-x-4">
+        <a href="{% url 'organization:committee_detail' committee.pk %}" 
+           class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+          Cancel
+        </a>
+        <button type="submit" 
+                class="px-6 py-2 rounded-lg text-white font-medium"
+                style="background-color: #7dc143;"
+                onmouseover="this.style.backgroundColor='#5a8a3c'"
+                onmouseout="this.style.backgroundColor='#7dc143'">
+          Add Member
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
