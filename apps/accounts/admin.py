@@ -15,7 +15,6 @@ class CustomUserAdmin(UserAdmin):
         ('Professional info', {'fields': ('role', 'department', 'job_title')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Security', {'fields': ('mfa_enabled',)}),
-        ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
     
     add_fieldsets = (
