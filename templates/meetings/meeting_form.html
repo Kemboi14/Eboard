@@ -114,7 +114,7 @@
       <!-- Meeting Details -->
       <div class="space-y-4">
         <h3 class="text-lg font-semibold mb-4" style="color: #2d1b5e;">Meeting Details</h3>
-        
+
         <div>
           {{ form.agenda.label_tag }}
           {{ form.agenda }}
@@ -141,6 +141,46 @@
               <p class="mt-1 text-sm text-red-600">{{ form.required_attendees.errors }}</p>
             {% endif %}
             <p class="mt-1 text-xs text-gray-500">Select required attendees (must attend)</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Recording Options -->
+      <div class="space-y-4">
+        <h3 class="text-lg font-semibold mb-4" style="color: #2d1b5e;">AI Recording & Transcription</h3>
+        <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p class="text-sm text-blue-800 mb-4">Enable AI-powered features to automatically transcribe and summarize your meeting recordings.</p>
+          
+          <div class="space-y-3">
+            <div class="flex items-center">
+              <div class="mr-3">
+                {{ form.enable_recording }}
+              </div>
+              <div>
+                <label class="font-medium text-gray-900">Enable Recording</label>
+                <p class="text-xs text-gray-600">Record the meeting for future reference</p>
+              </div>
+            </div>
+            
+            <div class="flex items-center">
+              <div class="mr-3">
+                {{ form.auto_transcribe }}
+              </div>
+              <div>
+                <label class="font-medium text-gray-900">Auto-Transcribe</label>
+                <p class="text-xs text-gray-600">Automatically transcribe meeting audio using AI</p>
+              </div>
+            </div>
+            
+            <div class="flex items-center">
+              <div class="mr-3">
+                {{ form.auto_summarize }}
+              </div>
+              <div>
+                <label class="font-medium text-gray-900">Auto-Summarize</label>
+                <p class="text-xs text-gray-600">Automatically generate meeting summary and action items</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

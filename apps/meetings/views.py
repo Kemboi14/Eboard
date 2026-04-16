@@ -27,6 +27,8 @@ from .models import (
     MeetingAttendance,
     MeetingMinutes,
 )
+from apps.recordings.models import MeetingRecording
+import uuid
 
 # ─── Meeting List ────────────────────────────────────────────────────────────
 
@@ -840,3 +842,33 @@ def meetings_calendar_data(request):
         )
 
     return JsonResponse(events, safe=False)
+
+
+# ─── AI Recording Integration ────────────────────────────────────────────────────
+
+
+@login_required
+@require_POST
+def create_meeting_recording(request, pk):
+    """Create an AI recording for a meeting."""
+    if request.user.role not in MANAGE_MEETINGS:
+        messages.error(request, "You do not have permission to create recordings.")
+        return redirect("meetings:meeting_detail", pk=pk)
+
+    meeting = get_object_or_404(Meeting, pk=pk)
+    
+    # Create recording
+    recording = MeetingRecording.objects.create(
+        meeting=meeting,
+        platform=meeting.virtual_platform if meeting.virtual_platform else "in_app",
+        platform_meeting_id=meeting.virtual_meeting_id,
+        title=f"{meeting.title} - Recording",
+        status="pending",
+        started_at=meeting.scheduled_date,
+        auto_transcribe=meeting.auto_transcribe,
+        auto_summarize=meeting.auto_summarize,
+        created_by=request.user,
+    )
+    
+    messages.success(request, "Recording created successfully. Processing will begin shortly.")
+    return redirect("meetings:meeting_detail", pk=pk)

@@ -1,0 +1,144 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Super Calendar{% endblock %}
+{% block page_title %}Super Calendar{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Calendar Header -->
+    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <h1 class="text-2xl font-bold" style="color: #2d1b5e">Super Calendar</h1>
+                
+                <!-- View Toggle -->
+                <div class="flex bg-gray-100 rounded-lg p-1">
+                    <a href="?view=month&date={{ current_date|date:'Y-m-d' }}&event_type={{ event_type_filter }}&my_events_only={{ my_events_only }}"
+                       class="px-4 py-2 rounded-md text-sm font-medium {% if view_type == 'month' %}bg-white shadow text-gray-900{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                        Month
+                    </a>
+                    <a href="?view=week&date={{ current_date|date:'Y-m-d' }}&event_type={{ event_type_filter }}&my_events_only={{ my_events_only }}"
+                       class="px-4 py-2 rounded-md text-sm font-medium {% if view_type == 'week' %}bg-white shadow text-gray-900{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                        Week
+                    </a>
+                    <a href="?view=day&date={{ current_date|date:'Y-m-d' }}&event_type={{ event_type_filter }}&my_events_only={{ my_events_only }}"
+                       class="px-4 py-2 rounded-md text-sm font-medium {% if view_type == 'day' %}bg-white shadow text-gray-900{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                        Day
+                    </a>
+                    <a href="?view=agenda&date={{ current_date|date:'Y-m-d' }}&event_type={{ event_type_filter }}&my_events_only={{ my_events_only }}"
+                       class="px-4 py-2 rounded-md text-sm font-medium {% if view_type == 'agenda' %}bg-white shadow text-gray-900{% else %}text-gray-600 hover:text-gray-900{% endif %}">
+                        Agenda
+                    </a>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <!-- Navigation -->
+                <div class="flex items-center gap-2">
+                    <button onclick="navigateDate(-1)" class="p-2 hover:bg-gray-100 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <button onclick="goToToday()" class="px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg">
+                        Today
+                    </button>
+                    <button onclick="navigateDate(1)" class="p-2 hover:bg-gray-100 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Date Display -->
+                <div class="text-lg font-semibold text-gray-900" id="currentDateDisplay">
+                    {% if view_type == 'month' %}{{ current_date|date:'F Y' }}{% elif view_type == 'week' %}Week of {{ current_date|date:'M d, Y' }}{% else %}{{ current_date|date:'F d, Y' }}{% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Filters -->
+        <div class="mt-4 flex items-center gap-4">
+            <select id="eventTypeFilter" onchange="applyFilters()" class="px-4 py-2 border border-gray-300 rounded-lg text-sm">
+                <option value="">All Event Types</option>
+                {% for type_value, type_label in event_types %}
+                <option value="{{ type_value }}" {% if event_type_filter == type_value %}selected{% endif %}>{{ type_label }}</option>
+                {% endfor %}
+            </select>
+            
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" id="myEventsOnly" {% if my_events_only %}checked{% endif %} onchange="applyFilters()" class="rounded">
+                My Events Only
+            </label>
+            
+            <a href="{% url 'calendar:preferences' %}" class="ml-auto text-sm text-gray-600 hover:text-gray-900">
+                ⚙️ Preferences
+            </a>
+        </div>
+    </div>
+    
+    <!-- Calendar Views -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        {% if view_type == 'month' %}
+        {% include 'calendar/partials/month_view.html' %}
+        {% elif view_type == 'week' %}
+        {% include 'calendar/partials/week_view.html' %}
+        {% elif view_type == 'day' %}
+        {% include 'calendar/partials/day_view.html' %}
+        {% elif view_type == 'agenda' %}
+        {% include 'calendar/partials/agenda_view.html' %}
+        {% endif %}
+    </div>
+    
+    <!-- Event Type Legend -->
+    <div class="bg-white rounded-xl shadow-sm p-4 mt-6">
+        <div class="flex flex-wrap gap-4 text-sm">
+            {% for type_value, type_label in event_types %}
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full" style="background-color: {% if type_value == 'meeting' %}#3b82f6{% elif type_value == 'voting_deadline' %}#ef4444{% elif type_value == 'document_due' %}#f59e0b{% elif type_value == 'risk_review' %}#8b5cf6{% elif type_value == 'audit_date' %}#06b6d4{% elif type_value == 'committee_meeting' %}#10b981{% elif type_value == 'esignature_deadline' %}#ec4899{% else %}#7dc143{% endif %}"></div>
+                <span class="text-gray-600">{{ type_label }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+let currentDate = new Date('{{ current_date|date:'Y-m-d' }}');
+let viewType = '{{ view_type }}';
+
+function navigateDate(direction) {
+    if (viewType === 'month') {
+        currentDate.setMonth(currentDate.getMonth() + direction);
+    } else if (viewType === 'week') {
+        currentDate.setDate(currentDate.getDate() + (direction * 7));
+    } else {
+        currentDate.setDate(currentDate.getDate() + direction);
+    }
+    updateURL();
+}
+
+function goToToday() {
+    currentDate = new Date();
+    updateURL();
+}
+
+function updateURL() {
+    const url = new URL(window.location);
+    url.searchParams.set('date', currentDate.toISOString().split('T')[0]);
+    window.location.href = url.toString();
+}
+
+function applyFilters() {
+    const eventType = document.getElementById('eventTypeFilter').value;
+    const myEventsOnly = document.getElementById('myEventsOnly').checked;
+    
+    const url = new URL(window.location);
+    if (eventType) url.searchParams.set('event_type', eventType);
+    else url.searchParams.delete('event_type');
+    url.searchParams.set('my_events_only', myEventsOnly);
+    window.location.href = url.toString();
+}
+</script>
+{% endblock %}

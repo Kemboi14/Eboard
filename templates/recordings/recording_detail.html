@@ -1,0 +1,205 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ recording.title }}{% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center gap-2 mb-2">
+            <a href="{% url 'recordings:recording_list' %}" class="text-blue-600 hover:text-blue-700">Recordings</a>
+            <span class="text-gray-400">/</span>
+            <span class="text-gray-900">{{ recording.title }}</span>
+        </div>
+        <div class="flex items-start justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">{{ recording.title }}</h1>
+                <p class="text-gray-600 mt-2">
+                    {{ recording.platform|title }} • {{ recording.started_at|date:"F d, Y g:i A" }}
+                    {% if recording.ended_at %}to {{ recording.ended_at|date:"g:i A" }}{% endif %}
+                </p>
+            </div>
+            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium
+                {% if recording.status == 'completed' %}bg-green-100 text-green-800
+                {% elif recording.status == 'processing' %}bg-yellow-100 text-yellow-800
+                {% elif recording.status == 'failed' %}bg-red-100 text-red-800
+                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                {{ recording.status|title }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="border-b border-gray-200 mb-6">
+        <nav class="flex gap-6">
+            <button class="px-1 py-3 text-blue-600 border-b-2 border-blue-600 font-medium">Overview</button>
+            {% if transcription %}
+            <a href="{% url 'recordings:transcription_view' transcription.id %}" class="px-1 py-3 text-gray-600 hover:text-gray-900 border-b-2 border-transparent hover:border-gray-300 font-medium">Transcription</a>
+            {% endif %}
+            <a href="{% url 'recordings:summaries_list' %}?recording={{ recording.id }}" class="px-1 py-3 text-gray-600 hover:text-gray-900 border-b-2 border-transparent hover:border-gray-300 font-medium">Summaries</a>
+            <a href="{% url 'recordings:action_items_list' %}?recording={{ recording.id }}" class="px-1 py-3 text-gray-600 hover:text-gray-900 border-b-2 border-transparent hover:border-gray-300 font-medium">Action Items</a>
+        </nav>
+    </div>
+
+    <!-- Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Executive Summary -->
+            {% if executive_summary %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Executive Summary</h2>
+                <div class="prose prose-gray max-w-none text-gray-700">
+                    {{ executive_summary.content|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Detailed Summary -->
+            {% if detailed_summary %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Detailed Summary</h2>
+                <div class="prose prose-gray max-w-none text-gray-700">
+                    {{ detailed_summary.content|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Transcription Preview -->
+            {% if transcription %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-900">Transcription</h2>
+                    <a href="{% url 'recordings:transcription_view' transcription.id %}" class="text-blue-600 hover:text-blue-700 text-sm font-medium">View full transcription →</a>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                    <p class="text-gray-700 text-sm">{{ transcription.full_text|truncatewords:100 }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Audio/Video Player -->
+            {% if recording.audio_file %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Audio Recording</h2>
+                <audio controls class="w-full">
+                    <source src="{{ recording.audio_file.url }}" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+            {% endif %}
+
+            {% if recording.video_file %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Video Recording</h2>
+                <video controls class="w-full rounded-lg">
+                    <source src="{{ recording.video_file.url }}" type="video/mp4">
+                    Your browser does not support the video element.
+                </video>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Action Items -->
+            {% if action_items %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-900">Action Items</h2>
+                    <a href="{% url 'recordings:action_items_list' %}?recording={{ recording.id }}" class="text-blue-600 hover:text-blue-700 text-sm font-medium">View all →</a>
+                </div>
+                <div class="space-y-3">
+                    {% for item in action_items|slice:":5" %}
+                    <a href="{% url 'recordings:action_item_detail' item.id %}" class="block p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">{{ item.description|truncatewords:10 }}</p>
+                                <p class="text-xs text-gray-600 mt-1">
+                                    {% if item.assigned_to %}{{ item.assigned_to.get_full_name|default:item.assigned_to.username }}{% else %}Unassigned{% endif %}
+                                </p>
+                            </div>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                                {% if item.status == 'completed' %}bg-green-100 text-green-800
+                                {% elif item.status == 'in_progress' %}bg-blue-100 text-blue-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ item.status|title }}
+                            </span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Sentiment Analysis -->
+            {% if sentiment %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Sentiment Analysis</h2>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Overall Sentiment</span>
+                        <span class="font-medium
+                            {% if sentiment.overall_sentiment == 'positive' %}text-green-600
+                            {% elif sentiment.overall_sentiment == 'negative' %}text-red-600
+                            {% else %}text-gray-600{% endif %}">
+                            {{ sentiment.overall_sentiment|title }}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Sentiment Score</span>
+                        <span class="font-medium text-gray-900">{{ sentiment.sentiment_score }}</span>
+                    </div>
+                    {% if sentiment.engagement_score %}
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Engagement</span>
+                        <span class="font-medium text-gray-900">{{ sentiment.engagement_score }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Topics -->
+            {% if topics %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Topics Discussed</h2>
+                <div class="flex flex-wrap gap-2">
+                    {% for topic in topics %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                        {{ topic.topic }}
+                        <span class="ml-1 text-xs opacity-75">{{ topic.confidence|floatformat:2 }}</span>
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recording Info -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Recording Details</h2>
+                <div class="space-y-3 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Platform</span>
+                        <span class="font-medium text-gray-900">{{ recording.platform|title }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Duration</span>
+                        <span class="font-medium text-gray-900">
+                            {% if recording.duration_seconds %}{{ recording.duration_seconds|div:60 }} min{% else %}N/A{% endif %}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Created by</span>
+                        <span class="font-medium text-gray-900">{{ recording.created_by.get_full_name|default:recording.created_by.username }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Created at</span>
+                        <span class="font-medium text-gray-900">{{ recording.created_at|date:"M d, Y g:i A" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

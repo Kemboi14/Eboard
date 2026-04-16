@@ -1,0 +1,135 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ action_item.description|truncatewords:10 }}{% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center gap-2 mb-2">
+            <a href="{% url 'recordings:action_items_list' %}" class="text-blue-600 hover:text-blue-700">Action Items</a>
+            <span class="text-gray-400">/</span>
+            <span class="text-gray-900">{{ action_item.description|truncatewords:10 }}</span>
+        </div>
+    </div>
+
+    <!-- Action Item Details -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Description -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Action Item</h2>
+                <p class="text-gray-700 text-lg">{{ action_item.description }}</p>
+            </div>
+
+            <!-- Context -->
+            {% if action_item.context %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Context</h2>
+                <p class="text-gray-700">{{ action_item.context }}</p>
+            </div>
+            {% endif %}
+
+            <!-- Recording Reference -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">From Meeting</h2>
+                <a href="{% url 'recordings:recording_detail' action_item.recording.id %}" class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">{{ action_item.recording.title }}</p>
+                        <p class="text-sm text-gray-600">{{ action_item.recording.started_at|date:"M d, Y g:i A" }}</p>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Timestamp in Recording -->
+            {% if action_item.timestamp_in_recording %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Timestamp in Recording</h2>
+                <p class="text-gray-700">
+                    Mentioned at {{ action_item.timestamp_in_recording|floatformat:1 }} seconds into the recording
+                </p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Status -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Status</h2>
+                <form method="post" action="{% url 'recordings:update_action_item_status' action_item.id %}">
+                    {% csrf_token %}
+                    <select name="status" class="w-full border border-gray-300 rounded-lg px-3 py-2 mb-3">
+                        <option value="pending" {% if action_item.status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="in_progress" {% if action_item.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                        <option value="completed" {% if action_item.status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="cancelled" {% if action_item.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                    <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        Update Status
+                    </button>
+                </form>
+            </div>
+
+            <!-- Priority -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Priority</h2>
+                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium
+                    {% if action_item.priority == 'high' %}bg-red-100 text-red-800
+                    {% elif action_item.priority == 'medium' %}bg-yellow-100 text-yellow-800
+                    {% else %}bg-green-100 text-green-800{% endif %}">
+                    {{ action_item.priority|title }}
+                </span>
+            </div>
+
+            <!-- Assigned To -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Assigned To</h2>
+                {% if action_item.assigned_to %}
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                        <span class="text-purple-600 font-medium">{{ action_item.assigned_to.get_full_name|default:action_item.assigned_to.username|slice:":1"|upper }}</span>
+                    </div>
+                    <span class="text-gray-900">{{ action_item.assigned_to.get_full_name|default:action_item.assigned_to.username }}</span>
+                </div>
+                {% else %}
+                <p class="text-gray-500">Unassigned</p>
+                {% endif %}
+            </div>
+
+            <!-- Due Date -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Due Date</h2>
+                {% if action_item.due_date %}
+                <p class="text-gray-900">{{ action_item.due_date|date:"F d, Y" }}</p>
+                {% else %}
+                <p class="text-gray-500">No due date set</p>
+                {% endif %}
+            </div>
+
+            <!-- Dates -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Dates</h2>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Created</span>
+                        <span class="text-gray-900">{{ action_item.created_at|date:"M d, Y g:i A" }}</span>
+                    </div>
+                    {% if action_item.completed_at %}
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Completed</span>
+                        <span class="text-gray-900">{{ action_item.completed_at|date:"M d, Y g:i A" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

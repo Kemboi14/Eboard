@@ -47,4 +47,6 @@ urlpatterns = [
         views.update_action_status,
         name="update_action_status",
     ),
+    # AI Recording
+    path("<uuid:pk>/recording/create/", views.create_meeting_recording, name="create_recording"),
 ]

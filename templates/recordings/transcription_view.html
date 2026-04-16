@@ -1,0 +1,101 @@
+{% extends "base/base.html" %}
+
+{% block title %}Transcription - {{ transcription.recording.title }}{% endblock %}
+
+{% block content %}
+<div class="p-6">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center gap-2 mb-2">
+            <a href="{% url 'recordings:recording_list' %}" class="text-blue-600 hover:text-blue-700">Recordings</a>
+            <span class="text-gray-400">/</span>
+            <a href="{% url 'recordings:recording_detail' transcription.recording.id %}" class="text-blue-600 hover:text-blue-700">{{ transcription.recording.title }}</a>
+            <span class="text-gray-400">/</span>
+            <span class="text-gray-900">Transcription</span>
+        </div>
+        <h1 class="text-3xl font-bold text-gray-900">Transcription</h1>
+        <p class="text-gray-600 mt-2">{{ transcription.recording.title }}</p>
+    </div>
+
+    <!-- Transcription Info -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div>
+                <p class="text-sm text-gray-600">Language</p>
+                <p class="font-medium text-gray-900">{{ transcription.language|upper }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Engine</p>
+                <p class="font-medium text-gray-900">{{ transcription.transcription_engine }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Segments</p>
+                <p class="font-medium text-gray-900">{{ segments.count }}</p>
+            </div>
+            {% if transcription.processing_time_seconds %}
+            <div>
+                <p class="text-sm text-gray-600">Processing Time</p>
+                <p class="font-medium text-gray-900">{{ transcription.processing_time_seconds|floatformat:2 }}s</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Transcription Content -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-lg font-semibold text-gray-900">Full Transcription</h2>
+            <button onclick="copyTranscription()" class="px-4 py-2 text-sm text-blue-600 hover:text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors">
+                Copy to Clipboard
+            </button>
+        </div>
+        <div id="transcription-text" class="prose prose-gray max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
+            {{ transcription.full_text }}
+        </div>
+    </div>
+
+    <!-- Segments with Timestamps -->
+    {% if segments %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-6">Segments with Timestamps</h2>
+        <div class="space-y-4">
+            {% for segment in segments %}
+            <div class="p-4 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                            {{ segment.start_time|floatformat:1 }}s - {{ segment.end_time|floatformat:1 }}s
+                        </span>
+                        {% if segment.speaker %}
+                        <span class="text-sm font-medium text-gray-900">{{ segment.speaker }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <p class="text-gray-700">{{ segment.text }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Audio Player (if available) -->
+    {% if transcription.recording.audio_file %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Audio Recording</h2>
+        <audio controls class="w-full">
+            <source src="{{ transcription.recording.audio_file.url }}" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function copyTranscription() {
+    const text = document.getElementById('transcription-text').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Transcription copied to clipboard!');
+    });
+}
+</script>
+{% endblock %}

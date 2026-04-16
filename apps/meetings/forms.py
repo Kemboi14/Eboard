@@ -96,6 +96,9 @@ class CreateMeetingForm(forms.ModelForm):
             "enable_breakout_rooms",
             "enable_waiting_room",
             "max_participants",
+            # AI Recording options
+            "auto_transcribe",
+            "auto_summarize",
             # Content
             "agenda",
             "quorum_required",
@@ -132,6 +135,8 @@ class CreateMeetingForm(forms.ModelForm):
             "enable_screen_sharing": forms.CheckboxInput(attrs={"class": CHECKBOX_CLS}),
             "enable_breakout_rooms": forms.CheckboxInput(attrs={"class": CHECKBOX_CLS}),
             "enable_waiting_room": forms.CheckboxInput(attrs={"class": CHECKBOX_CLS}),
+            "auto_transcribe": forms.CheckboxInput(attrs={"class": CHECKBOX_CLS}),
+            "auto_summarize": forms.CheckboxInput(attrs={"class": CHECKBOX_CLS}),
             "max_participants": forms.NumberInput(
                 attrs={
                     "class": INPUT_CLS,
@@ -181,6 +186,8 @@ class CreateMeetingForm(forms.ModelForm):
         self.fields["venue_notes"].required = False
         self.fields["quorum_required"].required = False
         self.fields["max_participants"].required = False
+        self.fields["auto_transcribe"].required = False
+        self.fields["auto_summarize"].required = False
 
         # Make virtual fields not required at form level (model.clean handles it)
         for f in [

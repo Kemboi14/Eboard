@@ -137,6 +137,16 @@ class Meeting(models.Model):
         help_text="Maximum participants (leave blank for unlimited)",
     )
 
+    # AI Recording Options
+    auto_transcribe = models.BooleanField(
+        default=False,
+        help_text="Automatically transcribe meeting recordings using AI"
+    )
+    auto_summarize = models.BooleanField(
+        default=False,
+        help_text="Automatically generate meeting summaries using AI"
+    )
+
     # Agenda (plain-text draft — structured agenda items use AgendaItem model)
     agenda = models.TextField(blank=True, help_text="High-level agenda overview")
 

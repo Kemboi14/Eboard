@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.analytics",
     "apps.organization",
+    "apps.calendar",
+    "apps.recordings",
 ]
 
 # ---------------------------------------------------------------------------

@@ -135,6 +135,7 @@
 <!-- =========================================================
      AGENCIES & BRANCHES SECTION
      ========================================================= -->
+{% if is_global_admin %}
 <div
     x-show="sidebarOpen"
     class="px-3 pt-4 pb-1 text-xs font-semibold uppercase tracking-widest"
@@ -142,6 +143,15 @@
 >
     Organisation
 </div>
+{% else %}
+<div
+    x-show="sidebarOpen"
+    class="px-3 pt-4 pb-1 text-xs font-semibold uppercase tracking-widest"
+    style="color: #7dc143; opacity: 0.7"
+>
+    My Branch
+</div>
+{% endif %}
 
 <!-- My Branches -->
 {% url 'agencies:branch_list' as branches_url %}
@@ -205,6 +215,7 @@
     {% endif %}
 </a>
 
+{% if is_global_admin %}
 <!-- Agency Dashboard -->
 {% url 'agencies:agency_dashboard' as agency_dash_url %}
 <a
@@ -226,6 +237,7 @@
     </svg>
     <span x-show="sidebarOpen">Agency Overview</span>
 </a>
+{% endif %}
 
 <!-- Organizations (IT Admin only) -->
 {% if is_global_admin %} {% url 'agencies:organization_list' as org_list_url %}
@@ -406,6 +418,29 @@
     <span x-show="sidebarOpen">Voting</span>
 </a>
 {% endif %}
+
+<!-- Calendar -->
+{% url 'calendar:calendar' as calendar_url %}
+<a
+    href="{{ calendar_url }}"
+    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.namespace == 'calendar' %}font-medium text-white{% else %}text-gray-300 hover:text-white hover:bg-purple-800{% endif %}" {% if request.resolver_match.namespace == "calendar" %}style="background-color:#7dc143;"{% endif %}
+>
+    <svg
+        class="w-5 h-5 flex-shrink-0"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+    >
+        <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+        />
+    </svg>
+    <span x-show="sidebarOpen">Calendar</span>
+</a>
+
 
 <!-- =========================================================
      COMPLIANCE SECTION

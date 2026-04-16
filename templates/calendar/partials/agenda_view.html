@@ -1,0 +1,44 @@
+{% load static %}
+
+<div class="space-y-4">
+    {% for event in events %}
+    <a href="{% url 'calendar:event_detail' event.id %}"
+       class="block p-4 rounded-lg border-l-4 hover:shadow-md transition-shadow"
+       style="background-color: {{ event.color }}10; border-color: {{ event.color }}">
+        <div class="flex items-start justify-between">
+            <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="px-2 py-1 text-xs rounded-full" style="background-color: {{ event.color }}20; color: {{ event.color }}">
+                        {{ event.get_event_type_display }}
+                    </span>
+                    <span class="text-sm text-gray-600">{{ event.start_date|date:'M d, Y' }}</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">{{ event.title }}</h3>
+                {% if event.description %}
+                <p class="text-sm text-gray-600 mt-1 line-clamp-2">{{ event.description }}</p>
+                {% endif %}
+                <div class="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                    {% if event.start_date %}
+                    <span>{{ event.start_date|time:'g:i A' }}{% if event.end_date %} - {{ event.end_date|time:'g:i A' }}{% endif %}</span>
+                    {% endif %}
+                    {% if event.location %}
+                    <span>📍 {{ event.location }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <svg class="w-5 h-5 text-gray-400 flex-shrink-0 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </div>
+    </a>
+    {% endfor %}
+    {% if not events %}
+    <div class="text-center py-12 text-gray-500">
+        <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        <p class="text-lg font-medium">No upcoming events</p>
+        <p class="text-sm">Your calendar is clear for the next 30 days.</p>
+    </div>
+    {% endif %}
+</div>

@@ -369,6 +369,21 @@
                         </div>
                         {% endif %}
 
+                        {% if can_manage and meeting.ai_recordings.exists %}
+                        <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p class="text-sm text-blue-800 mb-2">
+                                <strong>AI Assistance Available:</strong> Use AI transcription to help draft minutes
+                            </p>
+                            {% for recording in meeting.ai_recordings.all %}
+                            {% if recording.transcriptions.exists %}
+                            <a href="{% url 'meetings:manage_minutes' meeting.id %}?use_transcription={{ recording.transcriptions.first.id }}" class="text-blue-600 hover:text-blue-900 text-sm">
+                                Import from AI Transcription →
+                            </a>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
                         <div
                             class="flex justify-between items-center text-sm text-gray-500"
                         >
@@ -396,6 +411,25 @@
                                 </span>
                             </div>
                         </div>
+
+                        {% if can_manage %}
+                        <div class="mt-4 flex space-x-2">
+                            <a
+                                href="{% url 'meetings:manage_minutes' meeting.id %}"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                            >
+                                Edit Minutes
+                            </a>
+                            {% if minutes.can_be_submitted %}
+                            <a
+                                href="{% url 'meetings:advance_minutes' meeting.id %}"
+                                class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                            >
+                                Submit for Review
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
 
                         {% if minutes.attachment %}
                         <div class="mt-4">
@@ -429,11 +463,91 @@
                         {% endif %}
                     </div>
                     {% else %}
-                    <p class="text-gray-500 text-center">
-                        No minutes recorded yet
-                    </p>
+                    <div class="p-4 bg-gray-50 rounded-lg text-center">
+                        <p class="text-gray-500 mb-3">
+                            No minutes recorded yet
+                        </p>
+                        {% if can_manage %}
+                        <a
+                            href="{% url 'meetings:manage_minutes' meeting.id %}"
+                            class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                        >
+                            Create Minutes
+                        </a>
+                        {% endif %}
+                    </div>
                     {% endif %}
                 </div>
+
+                <!-- AI Recordings & Transcription -->
+                {% if meeting.enable_recording or meeting.ai_recordings.exists or can_manage %}
+                <div>
+                    <h3
+                        class="text-lg font-semibold mb-2"
+                        style="color: #2d1b5e"
+                    >
+                        AI Recording & Transcription
+                    </h3>
+                    {% if meeting.ai_recordings.exists %}
+                    <div class="space-y-3">
+                        {% for recording in meeting.ai_recordings.all %}
+                        <div class="p-4 bg-gray-50 rounded-lg">
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-medium text-gray-900">
+                                    {{ recording.title }}
+                                </h4>
+                                <span
+                                    class="px-2 py-1 text-xs rounded-full {% if recording.status == 'completed' %}bg-green-100 text-green-800{% elif recording.status == 'processing' %}bg-yellow-100 text-yellow-800{% elif recording.status == 'failed' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-800{% endif %}"
+                                >
+                                    {{ recording.get_status_display }}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-2">
+                                Platform: {{ recording.get_platform_display }} •
+                                {% if recording.duration_seconds %}Duration: {{ recording.duration_seconds|duration_format }}{% endif %}
+                            </p>
+
+                            {% if recording.transcriptions.exists %}
+                            <div class="mt-3">
+                                <h5 class="text-sm font-medium text-gray-900 mb-1">Transcription</h5>
+                                {% for transcription in recording.transcriptions.all %}
+                                <div class="p-3 bg-white rounded border border-gray-200">
+                                    <p class="text-sm text-gray-700 line-clamp-3">{{ transcription.full_text|truncatewords:50 }}</p>
+                                    <a href="{% url 'recordings:transcription_view' transcription.id %}" class="text-blue-600 hover:text-blue-900 text-sm mt-2 inline-block">View Full Transcription →</a>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            {% if recording.summaries.exists %}
+                            <div class="mt-3">
+                                <h5 class="text-sm font-medium text-gray-900 mb-1">AI Summary</h5>
+                                {% for summary in recording.summaries.all %}
+                                <div class="p-3 bg-white rounded border border-gray-200">
+                                    <p class="text-sm text-gray-700">{{ summary.content|truncatewords:30 }}</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p class="text-sm text-blue-800 mb-2">AI Recording is enabled for this meeting.</p>
+                        <p class="text-xs text-blue-600">Recording will be available after the meeting concludes.</p>
+                        {% if can_manage %}
+                        <form method="post" action="{% url 'meetings:create_recording' meeting.id %}" class="mt-3">
+                            {% csrf_token %}
+                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                                Start Recording Now
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

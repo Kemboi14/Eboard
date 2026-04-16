@@ -226,7 +226,7 @@
               {% endif %}
 
               <form method="post"
-                    action="{% url 'agencies:toggle_committee_membership' committee.pk membership.pk %}">
+                    action="{% url 'agencies:toggle_committee_membership' membership.pk %}">
                 {% csrf_token %}
                 <button type="submit"
                         class="text-xs font-medium px-2.5 py-1 rounded border transition-colors

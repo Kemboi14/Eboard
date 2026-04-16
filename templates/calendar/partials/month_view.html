@@ -1,0 +1,33 @@
+{% load static %}
+{% load calendar_filters %}
+
+<div class="grid grid-cols-7 gap-1">
+    <!-- Day Headers -->
+    <div class="text-center text-sm font-semibold text-gray-600 py-2">Sun</div>
+    <div class="text-center text-sm font-semibold text-gray-600 py-2">Mon</div>
+    <div class="text-center text-sm font-semibold text-gray-600 py-2">Tue</div>
+    <div class="text-center text-sm font-semibold text-gray-600 py-2">Wed</div>
+    <div class="text-center text-sm font-semibold text-gray-600 py-2">Thu</div>
+    <div class="text-center text-sm font-semibold text-gray-600 py-2">Fri</div>
+    <div class="text-center text-sm font-semibold text-gray-600 py-2">Sat</div>
+</div>
+
+<div class="grid grid-cols-7 gap-1 mt-2" id="calendarGrid">
+    {% for day in current_date|calendar_days %}
+    <div class="min-h-24 border border-gray-200 rounded-lg p-2 {% if day.is_today %}bg-blue-50{% else %}bg-white{% endif %}">
+        <div class="text-sm font-medium {% if day.is_today %}text-blue-600{% else %}text-gray-900{% endif %} mb-1">
+            {{ day.date|date:'d' }}
+        </div>
+        <div class="space-y-1">
+            {% for event in day.events %}
+            <a href="{% url 'calendar:event_detail' event.id %}"
+               class="block text-xs p-1 rounded truncate"
+               style="background-color: {{ event.color }}20; color: {{ event.color }}; border-left: 3px solid {{ event.color }}"
+               title="{{ event.title }}">
+                {{ event.title }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>

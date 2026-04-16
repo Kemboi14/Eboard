@@ -1,0 +1,28 @@
+{% load static %}
+{% load calendar_filters %}
+
+<div class="space-y-4">
+    {% for hour in current_date|day_hours %}
+    <div class="flex items-start border-b border-gray-200 pb-4">
+        <div class="w-20 flex-shrink-0 text-sm text-gray-600 pt-2">
+            {{ hour|time:'g:i A' }}
+        </div>
+        <div class="flex-1 min-h-16">
+            {% for event in current_date|day_events:hour %}
+            <a href="{% url 'calendar:event_detail' event.id %}"
+               class="block p-3 rounded-lg border-l-4 mb-2"
+               style="background-color: {{ event.color }}10; border-color: {{ event.color }}">
+                <div class="flex items-center justify-between">
+                    <span class="font-medium text-gray-900">{{ event.title }}</span>
+                    <span class="text-sm text-gray-600">{{ event.start_date|time:'g:i A' }}{% if event.end_date %} - {{ event.end_date|time:'g:i A' }}{% endif %}</span>
+                </div>
+                <div class="text-sm text-gray-600 mt-1">{{ event.get_event_type_display }}</div>
+                {% if event.description %}
+                <div class="text-sm text-gray-500 mt-1 truncate">{{ event.description }}</div>
+                {% endif %}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>

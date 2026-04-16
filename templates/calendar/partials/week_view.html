@@ -1,0 +1,33 @@
+{% load static %}
+{% load calendar_filters %}
+
+<div class="space-y-2">
+    {% for day in current_date|week_days %}
+    <div class="flex items-start border-b border-gray-200 pb-2 {% if day.is_today %}bg-blue-50{% endif %}">
+        <div class="w-24 flex-shrink-0">
+            <div class="text-sm font-semibold {% if day.is_today %}text-blue-600{% else %}text-gray-900{% endif %}">
+                {{ day.date|date:'D' }}
+            </div>
+            <div class="text-2xl font-bold {% if day.is_today %}text-blue-600{% else %}text-gray-700{% endif %}">
+                {{ day.date|date:'d' }}
+            </div>
+        </div>
+        <div class="flex-1 space-y-1">
+            {% for event in day.events %}
+            <a href="{% url 'calendar:event_detail' event.id %}"
+               class="block p-2 rounded-lg border-l-4"
+               style="background-color: {{ event.color }}10; border-color: {{ event.color }}">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-gray-900">{{ event.title }}</span>
+                    <span class="text-xs text-gray-600">{{ event.start_date|time:'g:i A' }}</span>
+                </div>
+                <div class="text-xs text-gray-600 mt-1">{{ event.get_event_type_display }}</div>
+            </a>
+            {% endfor %}
+            {% if not day.events %}
+            <div class="text-sm text-gray-400 italic">No events</div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
