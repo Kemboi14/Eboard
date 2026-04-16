@@ -17,7 +17,7 @@ def DashboardView(request):
     
     # Common data for all roles
     context.update({
-        'unread_notifications_count': 0,  # Will be implemented with notifications app
+        'unread_notifications_count': 5,  # Sample count for testing
         'recent_notifications': [],  # Will be implemented with notifications app
     })
     

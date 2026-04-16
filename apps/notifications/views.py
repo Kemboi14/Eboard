@@ -11,6 +11,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 
 from .models import (
     Notification, NotificationPreference, NotificationTemplate, NotificationBatch, NotificationChannel
@@ -324,9 +326,9 @@ class NotificationChannelCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 # Notification Service Functions
-def create_notification(recipient, title, message, notification_type, 
-                       priority='normal', action_url=None, metadata=None):
-    """Helper function to create a notification"""
+def create_notification(recipient, title, message, notification_type,
+                       priority='normal', action_url=None, metadata=None, send_email=True):
+    """Helper function to create a notification and send email if enabled"""
     notification = Notification.objects.create(
         recipient=recipient,
         title=title,
@@ -336,7 +338,75 @@ def create_notification(recipient, title, message, notification_type,
         action_url=action_url,
         metadata=metadata or {}
     )
+
+    # Send email if enabled and requested
+    if send_email:
+        send_notification_email(notification)
+
     return notification
+
+def send_notification_email(notification):
+    """Send notification email to recipient based on their preferences"""
+    try:
+        # Get or create user's notification preferences
+        preference, _ = NotificationPreference.objects.get_or_create(
+            user=notification.recipient
+        )
+
+        # Check if user wants email for this notification type
+        if not preference.should_send_email(notification.notification_type):
+            return False
+
+        # Check if user is in quiet hours and notification is not urgent
+        if preference.is_in_quiet_hours() and notification.priority != 'urgent':
+            return False
+
+        # Check email frequency
+        if preference.email_frequency == 'never':
+            return False
+
+        # Prepare email content
+        subject = f"[Enwealth E-Board] {notification.title}"
+        message = notification.message
+
+        # Add action URL if available
+        action_link = ""
+        if notification.action_url:
+            from django.conf import settings
+            site_url = getattr(settings, 'SITE_URL', 'http://localhost:8000')
+            action_link = f"\n\nAction Link: {site_url}{notification.action_url}"
+
+        # Create email body
+        email_body = f"""
+Dear {notification.recipient.get_full_name()},
+
+{message}
+{action_link}
+
+---
+This is an automated notification from Enwealth E-Board Platform.
+To manage your notification preferences, please visit: {getattr(settings, 'SITE_URL', 'http://localhost:8000')}/notifications/preferences/
+"""
+
+        # Send email
+        send_mail(
+            subject,
+            email_body,
+            getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@enwealth.co.ke'),
+            [notification.recipient.email],
+            fail_silently=True
+        )
+
+        # Mark notification as email sent
+        notification.is_email_sent = True
+        notification.save(update_fields=['is_email_sent'])
+
+        return True
+
+    except Exception as e:
+        # Log error but don't fail the notification creation
+        print(f"Failed to send email notification: {e}")
+        return False
 
 def create_batch_notification(recipients, title, message, notification_type,
                            priority='normal', action_url=None, metadata=None):

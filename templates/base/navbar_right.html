@@ -53,9 +53,12 @@
                 <h3 class="text-sm font-semibold text-gray-900">
                     Notifications
                 </h3>
-                <button class="text-xs text-blue-600 hover:text-blue-800">
-                    Mark all read
-                </button>
+                <form method="post" action="{% url 'notifications:mark_all_read' %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="text-xs text-blue-600 hover:text-blue-800">
+                        Mark all read
+                    </button>
+                </form>
             </div>
 
             <!-- Notifications List -->
@@ -107,7 +110,7 @@
             <!-- Footer -->
             <div class="px-4 py-2 border-t border-gray-200">
                 <a
-                    href="#"
+                    href="{% url 'notifications:notification_list' %}"
                     class="block text-center text-xs text-blue-600 hover:text-blue-800"
                     >View all notifications</a
                 >
