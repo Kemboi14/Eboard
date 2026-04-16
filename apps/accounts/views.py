@@ -26,33 +26,33 @@ MFA_REQUIRED_ROLES = getattr(settings, 'MFA_REQUIRED_ROLES', [
 class LoginView(View):
     def get(self, request):
         if request.user.is_authenticated:
-            return redirect('dashboard')
+            return redirect('/dashboard/')
         form = LoginForm()
         return render(request, 'accounts/login.html', {'form': form})
-    
+
     def post(self, request):
         form = LoginForm(request, data=request.POST)
         if form.is_valid():
             email = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
-            
+
             # Track failed attempts
             key = f'login_attempts_{email}'
             attempts = cache.get(key, 0)
-            
+
             if attempts >= 5:
                 ttl = cache.ttl(key)
                 form.add_error(None, f"Account locked. Try again in {ttl // 60} minutes.")
                 return render(request, 'accounts/login.html', {'form': form})
-            
+
             user = authenticate(request, username=email, password=password)
-            
+
             if user is None:
                 cache.set(key, attempts + 1, timeout=1800)  # 30 minutes
                 remaining = 5 - attempts - 1
                 form.add_error(None, f"Invalid credentials. {remaining} attempts remaining.")
                 return render(request, 'accounts/login.html', {'form': form})
-            
+
             # Check MFA requirement
             if user.role in MFA_REQUIRED_ROLES:
                 if not user.mfa_enabled:
@@ -68,8 +68,8 @@ class LoginView(View):
                 # No MFA required, login directly
                 cache.delete(key)  # Reset attempts on success
                 login(request, user)
-                return redirect('dashboard')
-        
+                return redirect('/dashboard/')
+
         return render(request, 'accounts/login.html', {'form': form})
 
 class LogoutView(DjangoLogoutView):
@@ -155,23 +155,23 @@ def login_2fa(request):
     if request.method == 'POST':
         token = request.POST.get('otp_token')
         user = request.user  # User should be in session from first login step
-        
+
         # Verify OTP token
         for device in devices_for_user(user):
             if device.verify_token(token):
                 login(request, user)
                 messages.success(request, "Login successful!")
-                
+
                 # Clear login attempts
                 cache.delete(f'login_attempts_{user.email}')
-                
+
                 # Redirect based on user role
                 if user.role == 'it_administrator':
-                    return redirect('accounts:admin_dashboard')
-                return redirect('dashboard')
-        
+                    return redirect('/auth/admin-dashboard/')
+                return redirect('/dashboard/')
+
         messages.error(request, "Invalid authentication code.")
-    
+
     return render(request, 'accounts/login_2fa.html', {'form': None})
 
 @login_required
