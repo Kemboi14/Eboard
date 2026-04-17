@@ -1,0 +1,67 @@
+{% extends "base/base.html" %}
+
+{% block title %}Create Proxy Vote - Enwealth E-Board{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto">
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b">
+                <h1 class="text-2xl font-bold text-gray-900">Create Proxy Vote</h1>
+                <p class="text-sm text-gray-600 mt-2">Grant voting authority to another member</p>
+            </div>
+            <div class="p-6">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="space-y-6">
+                        <div>
+                            <label for="id_proxy" class="block text-sm font-medium text-gray-700">Proxy (Person to grant authority to)</label>
+                            <select name="proxy" id="id_proxy" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" required>
+                                <option value="">-- Select a member --</option>
+                                {% for user in all_users %}
+                                    <option value="{{ user.id }}">{{ user.get_full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="id_motion" class="block text-sm font-medium text-gray-700">Motion (Optional)</label>
+                            <select name="motion" id="id_motion" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">
+                                <option value="">-- Select a motion --</option>
+                                {% for motion in all_motions %}
+                                    <option value="{{ motion.id }}">{{ motion.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="id_valid_from" class="block text-sm font-medium text-gray-700">Valid From</label>
+                                <input type="datetime-local" name="valid_from" id="id_valid_from" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" required>
+                            </div>
+                            <div>
+                                <label for="id_valid_until" class="block text-sm font-medium text-gray-700">Valid Until</label>
+                                <input type="datetime-local" name="valid_until" id="id_valid_until" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" required>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="id_voting_instructions" class="block text-sm font-medium text-gray-700">Voting Instructions</label>
+                            <textarea name="voting_instructions" id="id_voting_instructions" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" placeholder="Specify how you want your proxy to vote..."></textarea>
+                        </div>
+                        <div>
+                            <label for="id_supporting_document" class="block text-sm font-medium text-gray-700">Supporting Document (Optional)</label>
+                            <input type="file" name="supporting_document" id="id_supporting_document" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">
+                        </div>
+                        <div class="flex justify-end space-x-3">
+                            <a href="{% url 'voting:proxy_votes' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                                Cancel
+                            </a>
+                            <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+                                Grant Proxy
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

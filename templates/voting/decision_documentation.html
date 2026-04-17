@@ -1,0 +1,51 @@
+{% extends "base/base.html" %}
+
+{% block title %}Decision Documentation - Enwealth E-Board{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Decision Documentation</h1>
+        <a href="{% url 'voting:decision_documentation_create' %}" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+            Document Decision
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow">
+        {% if decision_documentations %}
+            <div class="divide-y">
+                {% for doc in decision_documentations %}
+                    <div class="p-4 hover:bg-gray-50 transition">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">
+                                    {{ doc.title }}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    Motion: {{ doc.motion.title }}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    Documented: {{ doc.created_at|date:"M d, Y H:i" }}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    Status: 
+                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium {% if doc.status == 'final' %}bg-green-100 text-green-800{% elif doc.status == 'draft' %}bg-yellow-100 text-yellow-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ doc.status|title }}
+                                    </span>
+                                </p>
+                            </div>
+                            <a href="{% url 'voting:decision_documentation_detail' doc.pk %}" class="text-purple-600 text-sm hover:text-purple-800">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="p-8 text-center text-gray-500">
+                <p>No decision documentation found.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

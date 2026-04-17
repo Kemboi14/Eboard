@@ -1,0 +1,54 @@
+{% extends "base/base.html" %}
+
+{% block title %}Message Threads - Enwealth E-Board{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">Message Threads</h1>
+        <a href="{% url 'messaging:messages' %}" class="text-purple-600 hover:text-purple-800">
+            Back to Messages
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow">
+        {% if threads %}
+            <div class="divide-y">
+                {% for thread in threads %}
+                    <div class="p-4 hover:bg-gray-50 transition">
+                        <div class="flex items-start space-x-4">
+                            <div class="flex-shrink-0">
+                                <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                                    <span class="text-purple-600 font-semibold">
+                                        {{ thread.original_message.sender.first_name|first }}{{ thread.original_message.sender.last_name|first }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between">
+                                    <p class="text-sm font-medium text-gray-900 truncate">
+                                        {{ thread.original_message.subject }}
+                                    </p>
+                                    <p class="text-xs text-gray-500">
+                                        {{ thread.last_message_at|date:"M d, Y H:i" }}
+                                    </p>
+                                </div>
+                                <p class="text-sm text-gray-600 truncate">
+                                    {{ thread.original_message.body|truncatewords:20 }}
+                                </p>
+                                <a href="{% url 'messaging:thread_detail' thread.pk %}" class="text-purple-600 text-sm hover:text-purple-800">
+                                    View Thread
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="p-8 text-center text-gray-500">
+                <p>No message threads found.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

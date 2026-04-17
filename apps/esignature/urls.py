@@ -14,6 +14,11 @@ urlpatterns = [
         name="document_list",
     ),
     path(
+        "signabledocument/",
+        views.DownloadSignedDocumentsView.as_view(),
+        name="signabledocument",
+    ),
+    path(
         "upload/",
         views.DocumentUploadView.as_view(),
         name="document_upload",

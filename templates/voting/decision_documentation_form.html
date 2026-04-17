@@ -1,0 +1,60 @@
+{% extends "base/base.html" %}
+
+{% block title %}Document Decision - Enwealth E-Board{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto">
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b">
+                <h1 class="text-2xl font-bold text-gray-900">Document Decision</h1>
+                <p class="text-sm text-gray-600 mt-2">Create a formal record of a board decision</p>
+            </div>
+            <div class="p-6">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="space-y-6">
+                        <div>
+                            <label for="id_title" class="block text-sm font-medium text-gray-700">Title</label>
+                            <input type="text" name="title" id="id_title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" required>
+                        </div>
+                        <div>
+                            <label for="id_motion" class="block text-sm font-medium text-gray-700">Motion</label>
+                            <select name="motion" id="id_motion" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" required>
+                                <option value="">-- Select a motion --</option>
+                                {% for motion in all_motions %}
+                                    <option value="{{ motion.id }}">{{ motion.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="id_decision_summary" class="block text-sm font-medium text-gray-700">Decision Summary</label>
+                            <textarea name="decision_summary" id="id_decision_summary" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" required></textarea>
+                        </div>
+                        <div>
+                            <label for="id_rationale" class="block text-sm font-medium text-gray-700">Rationale</label>
+                            <textarea name="rationale" id="id_rationale" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" placeholder="Explain the reasoning behind the decision..."></textarea>
+                        </div>
+                        <div>
+                            <label for="id_implementation_notes" class="block text-sm font-medium text-gray-700">Implementation Notes</label>
+                            <textarea name="implementation_notes" id="id_implementation_notes" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" placeholder="How will this decision be implemented..."></textarea>
+                        </div>
+                        <div>
+                            <label for="id_supporting_document" class="block text-sm font-medium text-gray-700">Supporting Document (Optional)</label>
+                            <input type="file" name="supporting_document" id="id_supporting_document" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">
+                        </div>
+                        <div class="flex justify-end space-x-3">
+                            <a href="{% url 'voting:decision_documentation' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                                Cancel
+                            </a>
+                            <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+                                Save Documentation
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

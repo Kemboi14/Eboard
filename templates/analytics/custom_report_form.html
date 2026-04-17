@@ -1,0 +1,70 @@
+{% extends "base/base.html" %}
+
+{% block title %}Create Custom Report - Enwealth E-Board{% endblock %}
+
+{% block page_title %}Create Custom Report{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto">
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b">
+                <h1 class="text-2xl font-bold text-gray-900">Create Custom Report</h1>
+                <p class="text-sm text-gray-600 mt-2">Build a custom analytics report</p>
+            </div>
+            <div class="p-6">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="space-y-6">
+                        <div>
+                            <label for="id_title" class="block text-sm font-medium text-gray-700">Title</label>
+                            <input type="text" name="title" id="id_title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" required>
+                        </div>
+                        <div>
+                            <label for="id_description" class="block text-sm font-medium text-gray-700">Description</label>
+                            <textarea name="description" id="id_description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"></textarea>
+                        </div>
+                        <div>
+                            <label for="id_report_type" class="block text-sm font-medium text-gray-700">Report Type</label>
+                            <select name="report_type" id="id_report_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" required>
+                                <option value="summary">Summary Report</option>
+                                <option value="detailed">Detailed Report</option>
+                                <option value="comparative">Comparative Report</option>
+                                <option value="trend">Trend Analysis</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="id_data_sources" class="block text-sm font-medium text-gray-700">Data Sources (JSON)</label>
+                            <textarea name="data_sources" id="id_data_sources" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" placeholder='["meetings", "voting", "documents"]'></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Enter as JSON array of data source names</p>
+                        </div>
+                        <div>
+                            <label for="id_filters" class="block text-sm font-medium text-gray-700">Filters (JSON)</label>
+                            <textarea name="filters" id="id_filters" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" placeholder='{"date_range": "last_30_days"}'></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Enter as JSON object of filter criteria</p>
+                        </div>
+                        <div>
+                            <label for="id_groupings" class="block text-sm font-medium text-gray-700">Groupings (JSON)</label>
+                            <textarea name="groupings" id="id_groupings" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" placeholder='["branch", "committee"]'></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Enter as JSON array of grouping fields</p>
+                        </div>
+                        <div>
+                            <label for="id_calculations" class="block text-sm font-medium text-gray-700">Calculations (JSON)</label>
+                            <textarea name="calculations" id="id_calculations" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" placeholder='["count", "average", "sum"]'></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Enter as JSON array of calculation types</p>
+                        </div>
+                        <div class="flex justify-end space-x-3">
+                            <a href="{% url 'analytics:custom_reports' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                                Cancel
+                            </a>
+                            <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+                                Create Report
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

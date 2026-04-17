@@ -1,0 +1,49 @@
+{% extends "base/base.html" %}
+
+{% block title %}Thread - Enwealth E-Board{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b">
+                <h1 class="text-2xl font-bold text-gray-900">{{ thread.original_message.subject }}</h1>
+            </div>
+            <div class="p-6">
+                {% if messages %}
+                    <div class="space-y-6">
+                        {% for message in messages %}
+                            <div class="border-b pb-4 last:border-0">
+                                <div class="flex items-start space-x-4">
+                                    <div class="flex-shrink-0">
+                                        <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                                            <span class="text-purple-600 font-semibold">
+                                                {{ message.sender.first_name|first }}{{ message.sender.last_name|first }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex items-center justify-between">
+                                            <p class="text-sm font-medium text-gray-900">
+                                                {{ message.sender.get_full_name }}
+                                            </p>
+                                            <p class="text-xs text-gray-500">
+                                                {{ message.created_at|date:"M d, Y H:i" }}
+                                            </p>
+                                        </div>
+                                        <p class="text-sm text-gray-600 mt-2">
+                                            {{ message.body|linebreaks }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-gray-500">No messages in this thread yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

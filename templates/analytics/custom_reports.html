@@ -1,0 +1,61 @@
+{% extends "base/base.html" %}
+
+{% block title %}Custom Reports - Enwealth E-Board{% endblock %}
+
+{% block page_title %}Custom Reports{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-semibold text-gray-900">Custom Analytics Reports</h2>
+        <a href="{% url 'analytics:custom_report_create' %}" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+            Create Report
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow">
+        {% if reports %}
+            <div class="divide-y">
+                {% for report in reports %}
+                    <div class="p-4 hover:bg-gray-50 transition">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">
+                                    {{ report.title }}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    {{ report.description }}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    Report Type: {{ report.report_type|title }}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    Created: {{ report.created_at|date:"M d, Y H:i" }}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    Created by: {{ report.created_by.get_full_name }}
+                                </p>
+                            </div>
+                            <div class="flex space-x-2 ml-4">
+                                <a href="{% url 'analytics:custom_report_detail' report.pk %}" 
+                                   class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    View
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="p-8 text-center text-gray-500">
+                <p>No custom reports found.</p>
+                <p class="mt-2">
+                    <a href="{% url 'analytics:custom_report_create' %}" class="text-purple-600 hover:text-purple-800">
+                        Create your first report
+                    </a>
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

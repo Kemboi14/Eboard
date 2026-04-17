@@ -1,0 +1,70 @@
+{% extends "base/base.html" %}
+
+{% block title %}Download Signed Documents - Enwealth E-Board{% endblock %}
+
+{% block page_title %}Download Signed Documents{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow">
+        {% if documents %}
+            <div class="divide-y">
+                {% for document in documents %}
+                    <div class="p-4 hover:bg-gray-50 transition">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">
+                                    {{ document.title }}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    Reference: {{ document.reference_number }}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    Uploaded: {{ document.created_at|date:"M d, Y H:i" }}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    Uploaded by: {{ document.uploaded_by.get_full_name }}
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    Signers: {{ document.signers.count }} / {{ document.signers.count }} signed
+                                </p>
+                            </div>
+                            <div class="flex space-x-2 ml-4">
+                                <a href="{% url 'esignature:download_signed_document' document.pk %}" 
+                                   class="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700">
+                                    Download
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            {% if is_paginated %}
+            <div class="px-4 py-3 border-t flex items-center justify-between">
+                <div class="text-sm text-gray-700">
+                    Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </div>
+                <div class="flex space-x-2">
+                    {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}" 
+                           class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                            Previous
+                        </a>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" 
+                           class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                            Next
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="p-8 text-center text-gray-500">
+                <p>No signed documents available for download.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

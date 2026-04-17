@@ -1,0 +1,57 @@
+{% extends "base/base.html" %}
+
+{% block title %}Decision Tracking - Enwealth E-Board{% endblock %}
+
+{% block page_title %}Decision Tracking{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6 border-b">
+            <h2 class="text-xl font-semibold text-gray-900">Board Decisions</h2>
+        </div>
+        <div class="p-6">
+            {% if decisions %}
+                <div class="divide-y">
+                    {% for decision in decisions %}
+                        <div class="p-4 hover:bg-gray-50 transition">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900">
+                                        {{ decision.title }}
+                                    </p>
+                                    <p class="text-sm text-gray-600">
+                                        Motion: {{ decision.motion.title }}
+                                    </p>
+                                    <p class="text-sm text-gray-600">
+                                        Decision Date: {{ decision.decision_date|date:"M d, Y" }}
+                                    </p>
+                                    <p class="text-sm text-gray-600">
+                                        Status: 
+                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium {% if decision.status == 'implemented' %}bg-green-100 text-green-800{% elif decision.status == 'pending' %}bg-yellow-100 text-yellow-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                            {{ decision.status|title }}
+                                        </span>
+                                    </p>
+                                    <p class="text-sm text-gray-600">
+                                        Decision Type: {{ decision.decision_type|title }}
+                                    </p>
+                                </div>
+                                <div class="flex space-x-2 ml-4">
+                                    <a href="{% url 'analytics:decision_tracking_detail' decision.pk %}" 
+                                       class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                        View Details
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="p-8 text-center text-gray-500">
+                    <p>No decision tracking records found.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

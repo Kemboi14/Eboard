@@ -1,0 +1,51 @@
+{% extends "base/base.html" %}
+
+{% block title %}New Message - Enwealth E-Board{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b">
+                <h1 class="text-2xl font-bold text-gray-900">New Message</h1>
+            </div>
+            <div class="p-6">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="space-y-6">
+                        <div>
+                            <label for="id_subject" class="block text-sm font-medium text-gray-700">Subject</label>
+                            <input type="text" name="subject" id="id_subject" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" required>
+                        </div>
+                        <div>
+                            <label for="id_recipients" class="block text-sm font-medium text-gray-700">Recipients</label>
+                            <select name="recipients" id="id_recipients" multiple class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" required>
+                                {% for user in all_users %}
+                                    <option value="{{ user.id }}">{{ user.get_full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="id_priority" class="block text-sm font-medium text-gray-700">Priority</label>
+                            <select name="priority" id="id_priority" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500">
+                                <option value="normal">Normal</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="id_body" class="block text-sm font-medium text-gray-700">Message</label>
+                            <textarea name="body" id="id_body" rows="6" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" required></textarea>
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+                                Send Message
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

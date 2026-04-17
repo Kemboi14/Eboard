@@ -1041,7 +1041,7 @@ class ComplianceScorecardListView(LoginRequiredMixin, BranchOrganizationFilterMi
     ordering = ['-created_at']
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related("branch")
+        queryset = super().get_queryset().select_related("reviewed_by")
         user = self.request.user
 
         # Organization and branch filtering
@@ -1090,7 +1090,7 @@ class AttendanceAnalyticsListView(LoginRequiredMixin, BranchOrganizationFilterMi
     model = AttendanceAnalytics
     template_name = 'analytics/attendance_analytics.html'
     context_object_name = 'analytics'
-    ordering = ['-assessment_date']
+    ordering = ['-created_at']
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related("user", "meeting", "meeting__branch")
@@ -1220,7 +1220,7 @@ class CustomReportCreateView(LoginRequiredMixin, CreateView):
     """Create a new custom report"""
     model = CustomReport
     template_name = 'analytics/custom_report_form.html'
-    fields = ['title', 'description', 'report_type', 'data_sources', 'filters', 'columns', 'chart_config']
+    fields = ['title', 'description', 'report_type', 'data_sources', 'filters', 'groupings', 'calculations']
     success_url = reverse_lazy('analytics:custom_reports')
     
     def form_valid(self, form):

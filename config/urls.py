@@ -41,6 +41,7 @@ urlpatterns = [
     path("recordings/", include("apps.recordings.urls")),
     path("survey/", include("apps.survey.urls")),
     path("messaging/", include("apps.messaging.urls")),
+    path("legacy-admin/esignature/", include("apps.esignature.urls")),
 ]
 
 # Serve media files during development

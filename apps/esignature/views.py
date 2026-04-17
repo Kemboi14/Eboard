@@ -334,6 +334,43 @@ class DocumentListView(LoginRequiredMixin, ListView):
         return ctx
 
 
+class DownloadSignedDocumentsView(LoginRequiredMixin, ListView):
+    """
+    /legacy-admin/esignature/signabledocument/
+    Lists fully signed documents for download.
+    """
+    model = SignableDocument
+    template_name = "esignature/download_signed_documents.html"
+    context_object_name = "documents"
+    paginate_by = 20
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = SignableDocument.objects.select_related(
+            "uploaded_by", "branch"
+        ).prefetch_related("signers")
+
+        # Only show fully signed documents
+        qs = qs.filter(status="fully_signed")
+
+        if user.role in ("it_administrator", "company_secretary"):
+            # Admins see everything
+            pass
+        else:
+            from django.db.models import Q
+
+            qs = qs.filter(
+                Q(uploaded_by=user) | Q(signers__user=user) | Q(viewers__user=user)
+            ).distinct()
+
+        return qs.order_by("-created_at")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["page_title"] = "Download Signed Documents"
+        return ctx
+
+
 class DocumentDetailView(LoginRequiredMixin, DetailView):
     """
     /esignature/<pk>/

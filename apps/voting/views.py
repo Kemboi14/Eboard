@@ -431,7 +431,7 @@ class ProxyVoteListView(LoginRequiredMixin, ListView):
         queryset = super().get_queryset()
         user = self.request.user
         # Users can see their own proxy votes and those they've been granted
-        queryset = queryset.filter(Q(principal=user) | Q(proxy_holder=user))
+        queryset = queryset.filter(Q(principal=user) | Q(proxy=user))
         return queryset
 
 
@@ -439,7 +439,7 @@ class ProxyVoteCreateView(LoginRequiredMixin, CreateView):
     """Create a new proxy vote"""
     model = ProxyVote
     template_name = 'voting/proxy_vote_form.html'
-    fields = ['proxy_holder', 'meeting', 'valid_from', 'valid_until', 'specific_motions', 'instructions', 'is_revocable']
+    fields = ['proxy', 'motion', 'valid_from', 'valid_until', 'voting_instructions', 'supporting_document']
     success_url = reverse_lazy('voting:proxy_votes')
     
     def form_valid(self, form):
@@ -475,7 +475,7 @@ class QuorumTrackingListView(LoginRequiredMixin, ListView):
     model = QuorumTracking
     template_name = 'voting/quorum_tracking.html'
     context_object_name = 'quorum_records'
-    ordering = ['-created_at']
+    ordering = ['-checked_at']
     
     def get_queryset(self):
         queryset = super().get_queryset()
