@@ -357,3 +357,404 @@ class RiskIncident(models.Model):
 
     def __str__(self):
         return f"{self.risk.title} - Incident: {self.title}"
+
+
+class ComplianceRequirement(models.Model):
+    """Compliance requirements and regulations"""
+
+    CATEGORY_CHOICES = [
+        ('gdpr', 'GDPR'),
+        ('data_protection', 'Data Protection'),
+        ('financial', 'Financial Regulation'),
+        ('governance', 'Corporate Governance'),
+        ('health_safety', 'Health & Safety'),
+        ('environmental', 'Environmental'),
+        ('employment', 'Employment Law'),
+        ('tax', 'Tax Compliance'),
+        ('reporting', 'Reporting Requirements'),
+        ('other', 'Other'),
+    ]
+
+    STATUS_CHOICES = [
+        ('compliant', 'Compliant'),
+        ('non_compliant', 'Non-Compliant'),
+        ('partially_compliant', 'Partially Compliant'),
+        ('not_applicable', 'Not Applicable'),
+    ]
+
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=200)
+    description = models.TextField()
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    reference_number = models.CharField(max_length=50, blank=True, help_text="Regulation reference number")
+    
+    # Compliance status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='partially_compliant')
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    
+    # Dates
+    effective_date = models.DateField(help_text="When this requirement became effective")
+    review_date = models.DateField(help_text="Next review date")
+    
+    # Ownership
+    compliance_owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='compliance_requirements')
+    
+    # Score (0-100)
+    compliance_score = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    
+    # GDPR specific fields
+    gdpr_article = models.CharField(max_length=20, blank=True, help_text="GDPR Article number if applicable")
+    data_subject_rights = models.TextField(blank=True, help_text="Data subject rights addressed")
+    data_processing_purpose = models.TextField(blank=True, help_text="Purpose of data processing")
+    lawful_basis = models.CharField(max_length=100, blank=True, help_text="Lawful basis for processing")
+    
+    # Local law compliance
+    jurisdiction = models.CharField(max_length=100, blank=True, help_text="Applicable jurisdiction/country")
+    local_law_reference = models.TextField(blank=True, help_text="References to local laws and regulations")
+    
+    # Documentation
+    evidence_documents = models.ManyToManyField('documents.Document', blank=True, related_name='compliance_evidence')
+    policy_document = models.ForeignKey('documents.Document', on_delete=models.SET_NULL, null=True, blank=True, related_name='compliance_policies')
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Compliance Requirement'
+        verbose_name_plural = 'Compliance Requirements'
+        ordering = ['priority', '-compliance_score', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.get_category_display()})"
+
+
+class ComplianceAudit(models.Model):
+    """Compliance audit records"""
+
+    STATUS_CHOICES = [
+        ('scheduled', 'Scheduled'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('findings', 'Findings Identified'),
+        ('remediation', 'Remediation Required'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    
+    # Audit details
+    requirement = models.ForeignKey(ComplianceRequirement, on_delete=models.CASCADE, related_name='audits')
+    audit_date = models.DateField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
+    
+    # Audit results
+    score = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    findings = models.TextField(blank=True)
+    recommendations = models.TextField(blank=True)
+    
+    # Audit team
+    auditor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='conducted_audits')
+    reviewed_by = models.ManyToManyField(User, blank=True, related_name='reviewed_audits')
+    
+    # Remediation
+    remediation_plan = models.TextField(blank=True)
+    remediation_due_date = models.DateField(null=True, blank=True)
+    remediation_completed_date = models.DateField(null=True, blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Compliance Audit'
+        verbose_name_plural = 'Compliance Audits'
+        ordering = ['-audit_date']
+
+    def __str__(self):
+        return f"{self.title} - {self.audit_date}"
+
+
+class ConflictOfInterestDeclaration(models.Model):
+    """Conflict of interest declarations for board members"""
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending Review'),
+        ('acknowledged', 'Acknowledged'),
+        ('resolved', 'Resolved'),
+        ('mitigated', 'Mitigated'),
+        ('escalated', 'Escalated'),
+    ]
+
+    SEVERITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    declarant = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='coi_declarations')
+    
+    # Declaration details
+    title = models.CharField(max_length=200)
+    description = models.TextField(help_text="Detailed description of the conflict of interest")
+    
+    # Type of conflict
+    conflict_type = models.CharField(max_length=100, help_text="Type of conflict (e.g., financial, personal, business)")
+    related_entity = models.CharField(max_length=200, blank=True, help_text="Name of related entity or individual")
+    relationship_nature = models.TextField(blank=True, help_text="Nature of the relationship")
+    
+    # Severity and status
+    severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, default='medium')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    # Mitigation plan
+    mitigation_plan = models.TextField(blank=True, help_text="Plan to mitigate the conflict")
+    mitigation_approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_mitigations')
+    mitigation_approved_at = models.DateTimeField(null=True, blank=True)
+    
+    # Review
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_coi')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_notes = models.TextField(blank=True)
+    
+    # Meeting context
+    related_meeting = models.ForeignKey('meetings.Meeting', on_delete=models.SET_NULL, null=True, blank=True, related_name='coi_declarations')
+    
+    # Timestamps
+    declared_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Conflict of Interest Declaration'
+        verbose_name_plural = 'Conflict of Interest Declarations'
+        ordering = ['-declared_at']
+        indexes = [
+            models.Index(fields=['declarant', '-declared_at']),
+            models.Index(fields=['status', '-declared_at']),
+            models.Index(fields=['severity', '-declared_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.declarant.get_full_name() if self.declarant else 'Unknown'} - {self.title}"
+
+
+class WhistleblowerReport(models.Model):
+    """Anonymous whistleblower reports for reporting concerns"""
+
+    CATEGORY_CHOICES = [
+        ('fraud', 'Fraud'),
+        ('corruption', 'Corruption'),
+        ('harassment', 'Harassment'),
+        ('discrimination', 'Discrimination'),
+        ('safety', 'Safety Violation'),
+        ('environmental', 'Environmental Concern'),
+        ('financial', 'Financial Irregularity'),
+        ('governance', 'Governance Issue'),
+        ('other', 'Other'),
+    ]
+
+    STATUS_CHOICES = [
+        ('submitted', 'Submitted'),
+        ('under_review', 'Under Review'),
+        ('investigating', 'Investigating'),
+        ('resolved', 'Resolved'),
+        ('unfounded', 'Unfounded'),
+        ('closed', 'Closed'),
+    ]
+
+    SEVERITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Report details
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    title = models.CharField(max_length=200)
+    description = models.TextField(help_text="Detailed description of the concern")
+    
+    # Anonymity
+    is_anonymous = models.BooleanField(default=True)
+    reporter_email = models.EmailField(blank=True, help_text="Optional email for follow-up (if not fully anonymous)")
+    reporter_phone = models.CharField(max_length=20, blank=True, help_text="Optional phone for follow-up (if not fully anonymous)")
+    
+    # Incident details
+    incident_date = models.DateField(null=True, blank=True, help_text="Date of the incident")
+    location = models.CharField(max_length=200, blank=True, help_text="Location of the incident")
+    individuals_involved = models.TextField(blank=True, help_text="Names of individuals involved (if known)")
+    
+    # Severity and status
+    severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, default='medium')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='submitted')
+    
+    # Attachments
+    attachments = models.JSONField(null=True, blank=True, help_text="List of attached file IDs")
+    
+    # Investigation
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_reports')
+    investigation_notes = models.TextField(blank=True)
+    resolution_notes = models.TextField(blank=True)
+    
+    # Metadata
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Whistleblower Report'
+        verbose_name_plural = 'Whistleblower Reports'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['severity', '-created_at']),
+            models.Index(fields=['category', '-created_at']),
+        ]
+    
+    def __str__(self):
+        anonymous = "Anonymous" if self.is_anonymous else "Reported"
+        return f"{anonymous} - {self.title}"
+
+
+class BoardEvaluation(models.Model):
+    """Board evaluation and self-assessment"""
+
+    EVALUATION_TYPE_CHOICES = [
+        ('annual', 'Annual Evaluation'),
+        ('quarterly', 'Quarterly Review'),
+        ('special', 'Special Evaluation'),
+        ('self_assessment', 'Self-Assessment'),
+    ]
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('reviewed', 'Reviewed'),
+        ('approved', 'Approved'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Evaluation details
+    evaluation_type = models.CharField(max_length=20, choices=EVALUATION_TYPE_CHOICES)
+    evaluation_period_start = models.DateField(help_text="Start date of evaluation period")
+    evaluation_period_end = models.DateField(help_text="End date of evaluation period")
+    title = models.CharField(max_length=200)
+    
+    # Status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    
+    # Overall assessment
+    overall_score = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    overall_rating = models.CharField(max_length=20, blank=True, help_text="Overall rating (e.g., Excellent, Good, Needs Improvement)")
+    summary = models.TextField(help_text="Executive summary of the evaluation")
+    
+    # Strengths and areas for improvement
+    strengths = models.TextField(blank=True, help_text="Board strengths identified")
+    areas_for_improvement = models.TextField(blank=True, help_text="Areas requiring improvement")
+    recommendations = models.TextField(blank=True, help_text="Recommendations for improvement")
+    
+    # Governance assessment
+    governance_effectiveness = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    strategic_oversight = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    risk_management = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    
+    # Board composition
+    composition_assessment = models.TextField(blank=True, help_text="Assessment of board composition and diversity")
+    independence_assessment = models.TextField(blank=True, help_text="Assessment of board independence")
+    
+    # Review and approval
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_board_evaluations')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_board_evaluations')
+    approved_at = models.DateTimeField(null=True, blank=True)
+    
+    # Documentation
+    supporting_documents = models.ManyToManyField('documents.Document', blank=True, related_name='board_evaluations')
+    
+    # Metadata
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_board_evaluations')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Board Evaluation'
+        verbose_name_plural = 'Board Evaluations'
+        ordering = ['-evaluation_period_end']
+        indexes = [
+            models.Index(fields=['evaluation_type', '-evaluation_period_end']),
+            models.Index(fields=['status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_evaluation_type_display()} - {self.evaluation_period_end.strftime('%Y')}"
+
+
+class DirectorEvaluation(models.Model):
+    """Individual director evaluation as part of board evaluation"""
+
+    RATING_CHOICES = [
+        ('excellent', 'Excellent'),
+        ('good', 'Good'),
+        ('satisfactory', 'Satisfactory'),
+        ('needs_improvement', 'Needs Improvement'),
+        ('unsatisfactory', 'Unsatisfactory'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    board_evaluation = models.ForeignKey(BoardEvaluation, on_delete=models.CASCADE, related_name='director_evaluations')
+    director = models.ForeignKey(User, on_delete=models.CASCADE, related_name='evaluations')
+    
+    # Self-assessment
+    self_rating = models.CharField(max_length=20, choices=RATING_CHOICES, blank=True)
+    self_assessment = models.TextField(blank=True, help_text="Director's self-assessment")
+    
+    # Peer assessment
+    peer_rating = models.CharField(max_length=20, choices=RATING_CHOICES, blank=True)
+    peer_feedback = models.TextField(blank=True, help_text="Peer feedback summary")
+    
+    # Board chair assessment
+    chair_rating = models.CharField(max_length=20, choices=RATING_CHOICES, blank=True)
+    chair_feedback = models.TextField(blank=True, help_text="Board chair's feedback")
+    
+    # Overall rating
+    overall_rating = models.CharField(max_length=20, choices=RATING_CHOICES, blank=True)
+    overall_score = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    
+    # Specific competencies
+    governance_knowledge = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(10)])
+    strategic_thinking = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(10)])
+    financial_literacy = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(10)])
+    industry_expertise = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(10)])
+    communication = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(10)])
+    participation = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(10)])
+    
+    # Development needs
+    development_needs = models.TextField(blank=True, help_text="Identified development needs")
+    training_recommendations = models.TextField(blank=True, help_text="Training and development recommendations")
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Director Evaluation'
+        verbose_name_plural = 'Director Evaluations'
+        ordering = ['board_evaluation', 'director']
+        unique_together = ['board_evaluation', 'director']
+    
+    def __str__(self):
+        return f"{self.director.get_full_name()} - {self.board_evaluation.title}"

@@ -10,6 +10,7 @@ from .models import (
     EvaluationFramework,
     EvaluationQuestion,
     EvaluationTemplate,
+    EvaluationSummary,
 )
 
 
@@ -231,3 +232,22 @@ class EvaluationAnalyticsAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+@admin.register(EvaluationSummary)
+class EvaluationSummaryAdmin(admin.ModelAdmin):
+    list_display = (
+        "evaluation",
+        "overall_rating",
+        "performance_level",
+        "strengths",
+        "areas_for_improvement",
+        "recommendations",
+        "follow_up_required",
+        "generated_at",
+    )
+    list_filter = ("follow_up_required", "generated_at")
+    search_fields = ("evaluation__evaluation_period", "strengths", "areas_for_improvement")
+    readonly_fields = ("id", "generated_at")
+    raw_id_fields = ("evaluation", "generated_by", "follow_up_assigned_to")
+    ordering = ("-generated_at",)

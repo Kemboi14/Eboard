@@ -11,6 +11,7 @@ from django.views.generic import CreateView, DetailView, ListView
 
 from apps.accounts.decorators import role_required
 from apps.accounts.permissions import CAN_VOTE
+from apps.accounts.mixins import BranchOrganizationFilterMixin
 
 from .forms import (
     MotionForm,
@@ -19,10 +20,14 @@ from .forms import (
     VoteOptionForm,
     VotingSessionForm,
 )
-from .models import Motion, Vote, VoteOption, VoteResult, VotingSession
+from .models import (
+    Motion, Vote, VoteOption, VoteResult, VotingSession,
+    ProxyVote, QuorumTracking, DecisionDocumentation,
+    VotingPattern, VotingHistory
+)
 
 
-class MotionListView(LoginRequiredMixin, ListView):
+class MotionListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
     """List view for motions with role-based filtering"""
 
     model = Motion
@@ -31,11 +36,14 @@ class MotionListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        """Filter motions based on user role"""
+        """Filter motions based on user role and branch membership"""
         user = self.request.user
-        queryset = Motion.objects.all()
+        queryset = Motion.objects.select_related("meeting", "meeting__branch")
 
-        # Role-based filtering
+        # Organization and branch filtering
+        queryset = self.filter_queryset_by_branch(queryset, branch_field='meeting__branch')
+
+        # Role-based filtering within branch context
         if user.role == "it_administrator":
             return queryset
         elif user.role in ["company_secretary", "executive_management"]:
@@ -408,3 +416,143 @@ def voting_dashboard(request):
             in ["company_secretary", "executive_management", "it_administrator"],
         },
     )
+
+
+# ─── Proxy Voting Views ─────────────────────────────────────────────────────────
+
+class ProxyVoteListView(LoginRequiredMixin, ListView):
+    """List all proxy votes"""
+    model = ProxyVote
+    template_name = 'voting/proxy_votes.html'
+    context_object_name = 'proxy_votes'
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        # Users can see their own proxy votes and those they've been granted
+        queryset = queryset.filter(Q(principal=user) | Q(proxy_holder=user))
+        return queryset
+
+
+class ProxyVoteCreateView(LoginRequiredMixin, CreateView):
+    """Create a new proxy vote"""
+    model = ProxyVote
+    template_name = 'voting/proxy_vote_form.html'
+    fields = ['proxy_holder', 'meeting', 'valid_from', 'valid_until', 'specific_motions', 'instructions', 'is_revocable']
+    success_url = reverse_lazy('voting:proxy_votes')
+    
+    def form_valid(self, form):
+        form.instance.principal = self.request.user
+        messages.success(self.request, 'Proxy vote granted successfully.')
+        return super().form_valid(form)
+
+
+class ProxyVoteRevokeView(LoginRequiredMixin, DetailView):
+    """Revoke a proxy vote"""
+    model = ProxyVote
+    template_name = 'voting/proxy_vote_confirm_revoke.html'
+    context_object_name = 'proxy_vote'
+    
+    def post(self, request, *args, **kwargs):
+        proxy_vote = self.get_object()
+        if proxy_vote.principal != request.user and request.user.role not in ['it_administrator', 'company_secretary']:
+            messages.error(request, "You don't have permission to revoke this proxy vote.")
+            return redirect('voting:proxy_votes')
+        
+        proxy_vote.is_revoked = True
+        proxy_vote.revoked_at = timezone.now()
+        proxy_vote.save()
+        
+        messages.success(request, 'Proxy vote revoked successfully.')
+        return redirect('voting:proxy_votes')
+
+
+# ─── Quorum Management Views ───────────────────────────────────────────────────
+
+class QuorumTrackingListView(LoginRequiredMixin, ListView):
+    """List quorum tracking records"""
+    model = QuorumTracking
+    template_name = 'voting/quorum_tracking.html'
+    context_object_name = 'quorum_records'
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        meeting_id = self.request.GET.get('meeting')
+        if meeting_id:
+            queryset = queryset.filter(meeting_id=meeting_id)
+        return queryset
+
+
+class QuorumTrackingDetailView(LoginRequiredMixin, DetailView):
+    """View quorum tracking details"""
+    model = QuorumTracking
+    template_name = 'voting/quorum_tracking_detail.html'
+    context_object_name = 'quorum_record'
+
+
+# ─── Decision Documentation Views ───────────────────────────────────────────────
+
+class DecisionDocumentationListView(LoginRequiredMixin, ListView):
+    """List all decision documentation"""
+    model = DecisionDocumentation
+    template_name = 'voting/decision_documentation.html'
+    context_object_name = 'decisions'
+    ordering = ['-created_at']
+
+
+class DecisionDocumentationDetailView(LoginRequiredMixin, DetailView):
+    """View decision documentation details"""
+    model = DecisionDocumentation
+    template_name = 'voting/decision_documentation_detail.html'
+    context_object_name = 'decision'
+
+
+class DecisionDocumentationCreateView(LoginRequiredMixin, CreateView):
+    """Create decision documentation"""
+    model = DecisionDocumentation
+    template_name = 'voting/decision_documentation_form.html'
+    fields = ['motion', 'decision_summary', 'legal_basis', 'compliance_notes', 'implementation_plan', 'implementation_deadline', 'supporting_documents']
+    success_url = reverse_lazy('voting:decision_documentation')
+    
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        messages.success(self.request, 'Decision documentation created successfully.')
+        return super().form_valid(form)
+
+
+# ─── Voting Pattern Analysis Views ─────────────────────────────────────────────
+
+class VotingPatternListView(LoginRequiredMixin, ListView):
+    """List voting patterns"""
+    model = VotingPattern
+    template_name = 'voting/voting_patterns.html'
+    context_object_name = 'patterns'
+    ordering = ['-last_calculated_at']
+
+
+class VotingPatternDetailView(LoginRequiredMixin, DetailView):
+    """View voting pattern details"""
+    model = VotingPattern
+    template_name = 'voting/voting_pattern_detail.html'
+    context_object_name = 'pattern'
+
+
+class VotingHistoryListView(LoginRequiredMixin, ListView):
+    """List voting history"""
+    model = VotingHistory
+    template_name = 'voting/voting_history.html'
+    context_object_name = 'history'
+    ordering = ['-voting_session_date']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user_id = self.request.GET.get('user')
+        category = self.request.GET.get('category')
+        
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+        if category:
+            queryset = queryset.filter(motion_category=category)
+        return queryset

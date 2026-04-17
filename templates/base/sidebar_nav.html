@@ -322,101 +322,321 @@
 </div>
 
 <!-- Meetings -->
-{% url 'meetings:meeting_list' as meetings_url %}
-<a
-    href="{{ meetings_url }}"
-    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.namespace == 'meetings' and request.resolver_match.url_name == 'meeting_list' %}font-medium text-white{% else %}text-gray-300 hover:text-white hover:bg-purple-800{% endif %}" {% if request.resolver_match.namespace == "meetings" and request.resolver_match.url_name == "meeting_list" %}style="background-color:#7dc143;"{% endif %}
->
-    <svg
-        class="w-5 h-5 flex-shrink-0"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
+<div x-data="{ meetingsOpen: false }">
+    <button
+        @click="meetingsOpen = !meetingsOpen"
+        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.namespace == 'meetings' %}font-medium text-white{% else %}text-gray-300 hover:text-white hover:bg-purple-800{% endif %}" {% if request.resolver_match.namespace == "meetings" %}style="background-color:#7dc143;"{% endif %}
     >
-        <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-        />
-    </svg>
-    <span x-show="sidebarOpen">Meetings</span>
-    {% if can_manage_meetings %}
-    <span
-        x-show="sidebarOpen"
-        class="ml-auto text-xs bg-yellow-600 text-white px-1.5 py-0.5 rounded"
-    >
-        Manage
-    </span>
-    {% endif %}
-</a>
+        <svg
+            class="w-5 h-5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+        </svg>
+        <span x-show="sidebarOpen">Meetings</span>
+        {% if can_manage_meetings %}
+        <span
+            x-show="sidebarOpen"
+            class="ml-auto text-xs bg-yellow-600 text-white px-1.5 py-0.5 rounded"
+        >
+            Manage
+        </span>
+        {% endif %}
+        <svg
+            class="w-4 h-4 ml-auto transition-transform"
+            :class="meetingsOpen ? 'rotate-180' : ''"
+            x-show="sidebarOpen"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+            />
+        </svg>
+    </button>
+
+    <!-- Meetings Sub-menu -->
+    <div x-show="meetingsOpen" x-transition class="ml-4 mt-1 space-y-1">
+        {% url 'meetings:meeting_list' as meetings_list_url %}
+        <a
+            href="{{ meetings_list_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'meeting_list' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span x-show="sidebarOpen">Meeting List</span>
+        </a>
+
+        <a
+            href="/legacy-admin/meetings/videoconferencesession/"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 text-gray-400 hover:text-white hover:bg-purple-800"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            <span x-show="sidebarOpen">Video Conferencing</span>
+        </a>
+
+        {% url 'recordings:recording_list' as recordings_url %}
+        <a
+            href="{{ recordings_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'recording_list' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            <span x-show="sidebarOpen">Recordings</span>
+        </a>
+
+        {% url 'recordings:summaries_list' as summaries_url %}
+        <a
+            href="{{ summaries_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'summaries_list' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <span x-show="sidebarOpen">Meeting Summaries</span>
+        </a>
+
+        {% url 'recordings:action_items_list' as action_items_url %}
+        <a
+            href="{{ action_items_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'action_items_list' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+            </svg>
+            <span x-show="sidebarOpen">Action Items</span>
+        </a>
+    </div>
+</div>
 
 <!-- Documents -->
-{% url 'documents:document_list' as documents_url %}
-<a
-    href="{{ documents_url }}"
-    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.namespace == 'documents' and request.resolver_match.url_name == 'document_list' %}font-medium text-white{% else %}text-gray-300 hover:text-white hover:bg-purple-800{% endif %}" {% if request.resolver_match.namespace == "documents" and request.resolver_match.url_name == "document_list" %}style="background-color:#7dc143;"{% endif %}
->
-    <svg
-        class="w-5 h-5 flex-shrink-0"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
+<div x-data="{ documentsOpen: false }">
+    <button
+        @click="documentsOpen = !documentsOpen"
+        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.namespace == 'documents' %}font-medium text-white{% else %}text-gray-300 hover:text-white hover:bg-purple-800{% endif %}" {% if request.resolver_match.namespace == "documents" %}style="background-color:#7dc143;"{% endif %}
     >
-        <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-        />
-    </svg>
-    <span x-show="sidebarOpen">Documents</span>
-</a>
+        <svg
+            class="w-5 h-5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+        </svg>
+        <span x-show="sidebarOpen">Documents</span>
+        {% if can_manage_documents %}
+        <span
+            x-show="sidebarOpen"
+            class="ml-auto text-xs bg-yellow-600 text-white px-1.5 py-0.5 rounded"
+        >
+            Manage
+        </span>
+        {% endif %}
+        <svg
+            class="w-4 h-4 ml-auto transition-transform"
+            :class="documentsOpen ? 'rotate-180' : ''"
+            x-show="sidebarOpen"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+            />
+        </svg>
+    </button>
 
-{% if can_manage_documents %}
-{% url 'documents:upload_document' as upload_url %}
-<a
-    href="{{ upload_url }}"
-    class="flex items-center gap-3 px-3 py-2.5 ml-5 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.namespace == 'documents' and request.resolver_match.url_name == 'upload_document' %}font-medium text-white{% else %}text-gray-300 hover:text-white hover:bg-purple-800{% endif %}" {% if request.resolver_match.namespace == "documents" and request.resolver_match.url_name == "upload_document" %}style="background-color:#7dc143;"{% endif %}
->
-    <svg
-        class="w-4 h-4 flex-shrink-0"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-    >
-        <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 4v16m8-8H4"
-        />
-    </svg>
-    <span x-show="sidebarOpen">Upload Document</span>
-</a>
-{% endif %}
+    <!-- Documents Sub-menu -->
+    <div x-show="documentsOpen" x-transition class="ml-4 mt-1 space-y-1">
+        {% url 'documents:document_list' as documents_url %}
+        <a
+            href="{{ documents_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'document_list' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <span x-show="sidebarOpen">Document List</span>
+        </a>
+
+        {% if can_manage_documents %}
+        {% url 'documents:upload_document' as upload_url %}
+        <a
+            href="{{ upload_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'upload_document' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            <span x-show="sidebarOpen">Upload Document</span>
+        </a>
+        {% endif %}
+
+        {% url 'documents:manage_categories' as categories_url %}
+        <a
+            href="{{ categories_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'manage_categories' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+            </svg>
+            <span x-show="sidebarOpen">Categories</span>
+        </a>
+
+        {% url 'documents:retention_policies' as retention_url %}
+        <a
+            href="{{ retention_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'retention_policies' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span x-show="sidebarOpen">Retention Policies</span>
+        </a>
+
+        {% url 'documents:archive_records' as archive_url %}
+        <a
+            href="{{ archive_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'archive_records' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+            </svg>
+            <span x-show="sidebarOpen">Archive</span>
+        </a>
+    </div>
+</div>
 
 <!-- Voting -->
-{% if can_vote %} {% url 'voting:motion_list' as voting_url %}
-<a
-    href="{{ voting_url }}"
-    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.namespace == 'voting' and request.resolver_match.url_name == 'motion_list' %}font-medium text-white{% else %}text-gray-300 hover:text-white hover:bg-purple-800{% endif %}" {% if request.resolver_match.namespace == "voting" and request.resolver_match.url_name == "motion_list" %}style="background-color:#7dc143;"{% endif %}
->
-    <svg
-        class="w-5 h-5 flex-shrink-0"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
+{% if can_vote %}
+<div x-data="{ votingOpen: false }">
+    <button
+        @click="votingOpen = !votingOpen"
+        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.namespace == 'voting' %}font-medium text-white{% else %}text-gray-300 hover:text-white hover:bg-purple-800{% endif %}" {% if request.resolver_match.namespace == "voting" %}style="background-color:#7dc143;"{% endif %}
     >
-        <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-    </svg>
-    <span x-show="sidebarOpen">Voting</span>
-</a>
+        <svg
+            class="w-5 h-5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+        </svg>
+        <span x-show="sidebarOpen">Voting</span>
+        <svg
+            class="w-4 h-4 ml-auto transition-transform"
+            :class="votingOpen ? 'rotate-180' : ''"
+            x-show="sidebarOpen"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+            />
+        </svg>
+    </button>
+
+    <!-- Voting Sub-menu -->
+    <div x-show="votingOpen" x-transition class="ml-4 mt-1 space-y-1">
+        {% url 'voting:motion_list' as motions_url %}
+        <a
+            href="{{ motions_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'motion_list' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            <span x-show="sidebarOpen">Motions</span>
+        </a>
+
+        {% url 'voting:quorum_tracking' as quorum_url %}
+        <a
+            href="{{ quorum_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'quorum_tracking' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            <span x-show="sidebarOpen">Quorum Tracking</span>
+        </a>
+
+        {% url 'voting:proxy_votes' as proxy_url %}
+        <a
+            href="{{ proxy_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'proxy_votes' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+            <span x-show="sidebarOpen">Proxy Votes</span>
+        </a>
+
+        {% url 'voting:decision_documentation' as decision_url %}
+        <a
+            href="{{ decision_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'decision_documentation' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <span x-show="sidebarOpen">Decision Documentation</span>
+        </a>
+
+        {% url 'voting:voting_patterns' as pattern_url %}
+        <a
+            href="{{ pattern_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'voting_patterns' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+            </svg>
+            <span x-show="sidebarOpen">Voting Patterns</span>
+        </a>
+
+        {% url 'voting:voting_history' as history_url %}
+        <a
+            href="{{ history_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'voting_history' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span x-show="sidebarOpen">Voting History</span>
+        </a>
+    </div>
+</div>
 {% endif %}
 
 <!-- Calendar -->
@@ -454,34 +674,85 @@
 </div>
 
 <!-- E-Signatures -->
-{% url 'esignature:document_list' as esig_url %}
-<a
-    href="{{ esig_url }}"
-    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.namespace == 'esignature' %}font-medium text-white{% else %}text-gray-300 hover:text-white hover:bg-purple-800{% endif %}" {% if request.resolver_match.namespace == "esignature" %}style="background-color:#7dc143;"{% endif %}
->
-    <svg
-        class="w-5 h-5 flex-shrink-0"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
+<div x-data="{ esignatureOpen: false }">
+    <button
+        @click="esignatureOpen = !esignatureOpen"
+        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.namespace == 'esignature' %}font-medium text-white{% else %}text-gray-300 hover:text-white hover:bg-purple-800{% endif %}" {% if request.resolver_match.namespace == "esignature" %}style="background-color:#7dc143;"{% endif %}
     >
-        <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H7v-3a2 2 0 01.586-1.414z"
-        />
-    </svg>
-    <span x-show="sidebarOpen">E-Signatures</span>
-    {% if stats.awaiting_my_signature %}
-    <span
-        x-show="sidebarOpen"
-        class="ml-auto text-xs px-2 py-0.5 rounded-full font-medium bg-red-500 text-white"
-    >
-        {{ stats.awaiting_my_signature }}
-    </span>
-    {% endif %}
-</a>
+        <svg
+            class="w-5 h-5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H7v-3a2 2 0 01.586-1.414z"
+            />
+        </svg>
+        <span x-show="sidebarOpen">E-Signatures</span>
+        {% if stats.awaiting_my_signature %}
+        <span
+            x-show="sidebarOpen"
+            class="ml-auto text-xs px-2 py-0.5 rounded-full font-medium bg-red-500 text-white"
+        >
+            {{ stats.awaiting_my_signature }}
+        </span>
+        {% endif %}
+        <svg
+            class="w-4 h-4 ml-auto transition-transform"
+            :class="esignatureOpen ? 'rotate-180' : ''"
+            x-show="sidebarOpen"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+            />
+        </svg>
+    </button>
+
+    <!-- E-Signatures Sub-menu -->
+    <div x-show="esignatureOpen" x-transition class="ml-4 mt-1 space-y-1">
+        {% url 'esignature:document_list' as esig_url %}
+        <a
+            href="{{ esig_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'document_list' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <span x-show="sidebarOpen">Document List</span>
+        </a>
+
+        {% url 'esignature:my_signatures' as my_signatures_url %}
+        <a
+            href="{{ my_signatures_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'my_signatures' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H7v-3a2 2 0 01.586-1.414z"/>
+            </svg>
+            <span x-show="sidebarOpen">My Signatures</span>
+        </a>
+
+        <a
+            href="/legacy-admin/esignature/signabledocument/"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 text-gray-400 hover:text-white hover:bg-purple-800"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            <span x-show="sidebarOpen">Download Signed Documents</span>
+        </a>
+    </div>
+</div>
 
 <!-- Risk Register -->
 {% url 'risk:risk_list' as risk_url %}
@@ -577,28 +848,6 @@
     People
 </div>
 
-<!-- Board Evaluation -->
-{% url 'evaluation:evaluation_list' as evaluation_url %}
-<a
-    href="{{ evaluation_url }}"
-    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.namespace == 'evaluation' %}font-medium text-white{% else %}text-gray-300 hover:text-white hover:bg-purple-800{% endif %}" {% if request.resolver_match.namespace == "evaluation" %}style="background-color:#7dc143;"{% endif %}
->
-    <svg
-        class="w-5 h-5 flex-shrink-0"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-    >
-        <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-        />
-    </svg>
-    <span x-show="sidebarOpen">Board Evaluation</span>
-</a>
-
 <!-- Discussions -->
 {% url 'discussions:forum_list' as discussions_url %}
 <a
@@ -621,12 +870,85 @@
     <span x-show="sidebarOpen">Discussions</span>
 </a>
 
-<!-- Analytics -->
-{% if user_role == 'it_administrator' or user_role == 'company_secretary' or user_role == 'compliance_officer' %}
-{% url 'analytics:dashboard' as analytics_url %}
+<!-- Messaging -->
+<div x-data="{ messagingOpen: false }">
+    <button
+        @click="messagingOpen = !messagingOpen"
+        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.namespace == 'messaging' %}font-medium text-white{% else %}text-gray-300 hover:text-white hover:bg-purple-800{% endif %}" {% if request.resolver_match.namespace == "messaging" %}style="background-color:#7dc143;"{% endif %}
+    >
+        <svg
+            class="w-5 h-5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
+        </svg>
+        <span x-show="sidebarOpen">Messaging</span>
+        <svg
+            class="w-4 h-4 ml-auto transition-transform"
+            :class="messagingOpen ? 'rotate-180' : ''"
+            x-show="sidebarOpen"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+            />
+        </svg>
+    </button>
+
+    <!-- Messaging Sub-menu -->
+    <div x-show="messagingOpen" x-transition class="ml-4 mt-1 space-y-1">
+        {% url 'messaging:messages' as messages_url %}
+        <a
+            href="{{ messages_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'messages' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            <span x-show="sidebarOpen">Messages</span>
+        </a>
+
+        {% url 'messaging:threads' as threads_url %}
+        <a
+            href="{{ threads_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'threads' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"/>
+            </svg>
+            <span x-show="sidebarOpen">Message Threads</span>
+        </a>
+
+        {% url 'messaging:announcements' as announcements_url %}
+        <a
+            href="{{ announcements_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'announcements' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M15.436 6.167a3.001 3.001 0 01-2.725-1.674l-2.523-7.19a2 2 0 011.94-2.536h2.5a2 2 0 011.94 2.536l-2.523 7.19a2.998 2.998 0 01-2.664 2.166z"/>
+            </svg>
+            <span x-show="sidebarOpen">Announcements</span>
+        </a>
+    </div>
+</div>
+
+<!-- Survey -->
+{% url 'survey:surveys' as survey_url %}
 <a
-    href="{{ analytics_url }}"
-    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.namespace == 'analytics' %}font-medium text-white{% else %}text-gray-300 hover:text-white hover:bg-purple-800{% endif %}" {% if request.resolver_match.namespace == "analytics" %}style="background-color:#7dc143;"{% endif %}
+    href="{{ survey_url }}"
+    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.namespace == 'survey' %}font-medium text-white{% else %}text-gray-300 hover:text-white hover:bg-purple-800{% endif %}" {% if request.resolver_match.namespace == "survey" %}style="background-color:#7dc143;"{% endif %}
 >
     <svg
         class="w-5 h-5 flex-shrink-0"
@@ -638,11 +960,108 @@
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
         />
     </svg>
-    <span x-show="sidebarOpen">Analytics</span>
+    <span x-show="sidebarOpen">Survey</span>
 </a>
+
+<!-- Analytics -->
+{% if user_role == 'it_administrator' or user_role == 'company_secretary' or user_role == 'compliance_officer' %}
+<div x-data="{ analyticsOpen: false }">
+    <button
+        @click="analyticsOpen = !analyticsOpen"
+        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.namespace == 'analytics' %}font-medium text-white{% else %}text-gray-300 hover:text-white hover:bg-purple-800{% endif %}" {% if request.resolver_match.namespace == "analytics" %}style="background-color:#7dc143;"{% endif %}
+    >
+        <svg
+            class="w-5 h-5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+        </svg>
+        <span x-show="sidebarOpen">Analytics</span>
+        <svg
+            class="w-4 h-4 ml-auto transition-transform"
+            :class="analyticsOpen ? 'rotate-180' : ''"
+            x-show="sidebarOpen"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+            />
+        </svg>
+    </button>
+
+    <!-- Analytics Sub-menu -->
+    <div x-show="analyticsOpen" x-transition class="ml-4 mt-1 space-y-1">
+        {% url 'analytics:dashboard' as dashboard_url %}
+        <a
+            href="{{ dashboard_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'dashboard' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+            </svg>
+            <span x-show="sidebarOpen">Dashboard</span>
+        </a>
+
+        {% url 'analytics:compliance_scorecards' as compliance_url %}
+        <a
+            href="{{ compliance_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'compliance_scorecards' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span x-show="sidebarOpen">Compliance Scorecards</span>
+        </a>
+
+        {% url 'analytics:attendance_analytics_list' as attendance_url %}
+        <a
+            href="{{ attendance_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'attendance_analytics_list' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            <span x-show="sidebarOpen">Attendance Analytics</span>
+        </a>
+
+        {% url 'analytics:decision_tracking' as decision_tracking_url %}
+        <a
+            href="{{ decision_tracking_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'decision_tracking' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+            </svg>
+            <span x-show="sidebarOpen">Decision Tracking</span>
+        </a>
+
+        {% url 'analytics:custom_reports' as reports_url %}
+        <a
+            href="{{ reports_url }}"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150 {% if request.resolver_match.url_name == 'custom_reports' %}font-medium text-white{% else %}text-gray-400 hover:text-white hover:bg-purple-800{% endif %}"
+        >
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <span x-show="sidebarOpen">Custom Reports</span>
+        </a>
+    </div>
+</div>
 {% endif %}
 
 <!-- =========================================================

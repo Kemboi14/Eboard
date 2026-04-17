@@ -6,6 +6,64 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 
+# African countries list
+AFRICAN_COUNTRIES = [
+    ("Algeria", "Algeria"),
+    ("Angola", "Angola"),
+    ("Benin", "Benin"),
+    ("Botswana", "Botswana"),
+    ("Burkina Faso", "Burkina Faso"),
+    ("Burundi", "Burundi"),
+    ("Cabo Verde", "Cabo Verde"),
+    ("Cameroon", "Cameroon"),
+    ("Central African Republic", "Central African Republic"),
+    ("Chad", "Chad"),
+    ("Comoros", "Comoros"),
+    ("Democratic Republic of the Congo", "Democratic Republic of the Congo"),
+    ("Republic of the Congo", "Republic of the Congo"),
+    ("Cote d'Ivoire", "Cote d'Ivoire"),
+    ("Djibouti", "Djibouti"),
+    ("Egypt", "Egypt"),
+    ("Equatorial Guinea", "Equatorial Guinea"),
+    ("Eritrea", "Eritrea"),
+    ("Eswatini", "Eswatini"),
+    ("Ethiopia", "Ethiopia"),
+    ("Gabon", "Gabon"),
+    ("Gambia", "Gambia"),
+    ("Ghana", "Ghana"),
+    ("Guinea", "Guinea"),
+    ("Guinea-Bissau", "Guinea-Bissau"),
+    ("Kenya", "Kenya"),
+    ("Lesotho", "Lesotho"),
+    ("Liberia", "Liberia"),
+    ("Libya", "Libya"),
+    ("Madagascar", "Madagascar"),
+    ("Malawi", "Malawi"),
+    ("Mali", "Mali"),
+    ("Mauritania", "Mauritania"),
+    ("Mauritius", "Mauritius"),
+    ("Morocco", "Morocco"),
+    ("Mozambique", "Mozambique"),
+    ("Namibia", "Namibia"),
+    ("Niger", "Niger"),
+    ("Nigeria", "Nigeria"),
+    ("Rwanda", "Rwanda"),
+    ("Sao Tome and Principe", "Sao Tome and Principe"),
+    ("Senegal", "Senegal"),
+    ("Seychelles", "Seychelles"),
+    ("Sierra Leone", "Sierra Leone"),
+    ("Somalia", "Somalia"),
+    ("South Africa", "South Africa"),
+    ("South Sudan", "South Sudan"),
+    ("Sudan", "Sudan"),
+    ("Tanzania", "Tanzania"),
+    ("Togo", "Togo"),
+    ("Tunisia", "Tunisia"),
+    ("Uganda", "Uganda"),
+    ("Zambia", "Zambia"),
+    ("Zimbabwe", "Zimbabwe"),
+]
+
 
 class Organization(models.Model):
     """
@@ -22,7 +80,7 @@ class Organization(models.Model):
 
     # Address
     head_office_address = models.TextField(blank=True)
-    head_office_country = models.CharField(max_length=100, blank=True)
+    head_office_country = models.CharField(max_length=100, blank=True, choices=AFRICAN_COUNTRIES)
     head_office_city = models.CharField(max_length=100, blank=True)
 
     # Contact
@@ -122,7 +180,7 @@ class Branch(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active")
 
     # Location
-    country = models.CharField(max_length=100)
+    country = models.CharField(max_length=100, choices=AFRICAN_COUNTRIES)
     city = models.CharField(max_length=100, blank=True)
     address = models.TextField(blank=True)
     timezone_name = models.CharField(

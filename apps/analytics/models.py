@@ -3,6 +3,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.db.models import Sum, Count, Avg, F, Q
+from django.core.validators import MinValueValidator, MaxValueValidator
 from apps.accounts.models import User
 
 
@@ -327,16 +328,200 @@ class AnalyticsReport(models.Model):
     generated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='generated_reports')
     generated_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class ComplianceScorecard(models.Model):
+    """Compliance scorecard tracking"""
+
+    STATUS_CHOICES = [
+        ('compliant', 'Compliant'),
+        ('non_compliant', 'Non-Compliant'),
+        ('partially_compliant', 'Partially Compliant'),
+        ('not_applicable', 'Not Applicable'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    period_start = models.DateField()
+    period_end = models.DateField()
+    
+    # Compliance metrics
+    overall_score = models.PositiveIntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)])
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    
+    # Category scores
+    governance_score = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    financial_score = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    operational_score = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    
+    # Details
+    findings = models.TextField(blank=True)
+    recommendations = models.TextField(blank=True)
+    
+    # Metadata
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='reviewed_scorecards')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    
     class Meta:
-        verbose_name = 'Analytics Report'
-        verbose_name_plural = 'Analytics Reports'
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['report_type', '-created_at']),
-            models.Index(fields=['status']),
-        ]
-
+        verbose_name = 'Compliance Scorecard'
+        verbose_name_plural = 'Compliance Scorecards'
+        ordering = ['-period_end']
+    
     def __str__(self):
-        return f"{self.title} ({self.get_format_display()})"
+        return f"{self.period_start} to {self.period_end} - {self.overall_score}%"
+
+
+class AttendanceAnalytics(models.Model):
+    """Attendance and participation analytics"""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    meeting = models.ForeignKey('meetings.Meeting', on_delete=models.CASCADE, related_name='attendance_analytics')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='attendance_analytics')
+    
+    # Attendance metrics
+    attended = models.BooleanField(default=True)
+    arrived_late = models.BooleanField(default=False)
+    left_early = models.BooleanField(default=False)
+    participation_score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    
+    # Engagement
+    questions_asked = models.PositiveIntegerField(default=0)
+    comments_made = models.PositiveIntegerField(default=0)
+    documents_reviewed = models.PositiveIntegerField(default=0)
+    
+    # Context
+    meeting_duration = models.DurationField(null=True, blank=True)
+    attendance_duration = models.DurationField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Attendance Analytics'
+        verbose_name_plural = 'Attendance Analytics'
+        unique_together = ['meeting', 'user']
+        ordering = ['-meeting__scheduled_date']
+    
+    def __str__(self):
+        return f"{self.user.get_full_name()} - {self.meeting.title}"
+
+
+class DecisionTracking(models.Model):
+    """Track decisions and their outcomes"""
+
+    DECISION_TYPES = [
+        ('strategic', 'Strategic Decision'),
+        ('operational', 'Operational Decision'),
+        ('financial', 'Financial Decision'),
+        ('governance', 'Governance Decision'),
+        ('other', 'Other'),
+    ]
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    decision_type = models.CharField(max_length=20, choices=DECISION_TYPES)
+    
+    # Related to meeting or motion
+    meeting = models.ForeignKey('meetings.Meeting', on_delete=models.SET_NULL, null=True, blank=True, related_name='decisions')
+    motion = models.ForeignKey('voting.Motion', on_delete=models.SET_NULL, null=True, blank=True, related_name='decisions')
+    
+    # Status and outcome
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    outcome = models.TextField(blank=True, help_text="Final outcome of the decision")
+    
+    # Timeline
+    decision_date = models.DateField(null=True, blank=True)
+    implementation_date = models.DateField(null=True, blank=True)
+    target_completion_date = models.DateField(null=True, blank=True)
+    
+    # Impact assessment
+    impact_description = models.TextField(blank=True)
+    success_metrics = models.TextField(blank=True)
+    
+    # Ownership
+    decision_maker = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='decisions_made')
+    implementer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='decisions_implemented')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Decision Tracking'
+        verbose_name_plural = 'Decision Tracking'
+        ordering = ['-decision_date']
+    
+    def __str__(self):
+        return f"{self.title} - {self.get_status_display()}"
+
+
+class CustomReport(models.Model):
+    """Custom report builder"""
+
+    REPORT_TYPES = [
+        ('summary', 'Summary Report'),
+        ('detailed', 'Detailed Report'),
+        ('comparative', 'Comparative Report'),
+        ('trend', 'Trend Analysis'),
+    ]
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('scheduled', 'Scheduled'),
+        ('generating', 'Generating'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    report_type = models.CharField(max_length=20, choices=REPORT_TYPES)
+    
+    # Data sources
+    data_sources = models.JSONField(default=list, blank=True, help_text="List of data sources for the report")
+    
+    # Configuration
+    filters = models.JSONField(default=dict, blank=True, help_text="Filter configuration")
+    groupings = models.JSONField(default=list, blank=True, help_text="Grouping configuration")
+    calculations = models.JSONField(default=list, blank=True, help_text="Calculations to perform")
+    
+    # Scheduling
+    schedule = models.CharField(max_length=50, blank=True, help_text="Cron-like schedule")
+    next_run = models.DateTimeField(null=True, blank=True)
+    
+    # Output
+    output_format = models.CharField(max_length=10, choices=[
+        ('pdf', 'PDF'),
+        ('excel', 'Excel'),
+        ('csv', 'CSV'),
+    ], default='pdf')
+    
+    # Status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    
+    # File
+    generated_file = models.FileField(upload_to='reports/custom/%Y/%m/', null=True, blank=True)
+    
+    # Ownership
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='custom_reports')
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_generated_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        verbose_name = 'Custom Report'
+        verbose_name_plural = 'Custom Reports'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.title} ({self.get_status_display()})"

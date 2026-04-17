@@ -1,6 +1,10 @@
 from django.contrib import admin
 
-from .models import Motion, Vote, VoteOption, VoteResult, VotingSession
+from .models import (
+    Motion, Vote, VoteOption, VoteResult, VotingSession,
+    ProxyVote, QuorumTracking, DecisionDocumentation,
+    VotingPattern, VotingHistory
+)
 
 
 @admin.register(Motion)
@@ -158,3 +162,97 @@ class VoteResultAdmin(admin.ModelAdmin):
     readonly_fields = ("id", "certified_at", "updated_at")
     raw_id_fields = ("motion", "certified_by")
     ordering = ("-certified_at",)
+
+
+@admin.register(ProxyVote)
+class ProxyVoteAdmin(admin.ModelAdmin):
+    list_display = (
+        "principal",
+        "proxy",
+        "motion",
+        "voting_instructions",
+        "status",
+        "executed",
+        "approved_at",
+    )
+    list_filter = ("status", "executed")
+    search_fields = ("principal__email", "proxy__email", "motion__title")
+    readonly_fields = ("id", "created_at", "approved_at")
+    raw_id_fields = ("principal", "proxy", "motion", "approved_by")
+    ordering = ("-created_at",)
+
+
+@admin.register(QuorumTracking)
+class QuorumTrackingAdmin(admin.ModelAdmin):
+    list_display = (
+        "meeting",
+        "voting_session",
+        "status",
+        "required_members",
+        "present_members",
+        "quorum_percentage",
+        "checked_at",
+    )
+    list_filter = ("status", "checked_at")
+    search_fields = ("meeting__title",)
+    readonly_fields = ("id", "quorum_met_at", "quorum_lost_at", "checked_at")
+    raw_id_fields = ("meeting", "voting_session")
+    ordering = ("-checked_at",)
+
+
+@admin.register(DecisionDocumentation)
+class DecisionDocumentationAdmin(admin.ModelAdmin):
+    list_display = (
+        "motion",
+        "compliance_status",
+        "compliance_score",
+        "implementation_deadline",
+        "implementation_status",
+        "created_at",
+    )
+    list_filter = ("compliance_status", "implementation_status", "created_at")
+    search_fields = ("motion__title", "decision_summary", "legal_basis")
+    readonly_fields = ("id", "created_at", "updated_at")
+    raw_id_fields = ("motion",)
+    filter_horizontal = ("supporting_documents",)
+    ordering = ("-created_at",)
+
+
+@admin.register(VotingPattern)
+class VotingPatternAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "total_votes",
+        "votes_in_favor",
+        "votes_against",
+        "abstentions",
+        "participation_rate",
+        "consistency_score",
+        "last_calculated_at",
+    )
+    list_filter = ("typically_votes_with_majority", "often_abstains", "frequently_dissents", "last_calculated_at")
+    search_fields = ("user__email",)
+    readonly_fields = ("id", "last_calculated_at", "created_at")
+    raw_id_fields = ("user",)
+    ordering = ("-last_calculated_at",)
+
+
+@admin.register(VotingHistory)
+class VotingHistoryAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "motion_title",
+        "motion_category",
+        "vote_choice",
+        "motion_outcome",
+        "voting_session_date",
+        "vote_weight",
+        "was_decisive_vote",
+        "aligned_with_majority",
+        "recorded_at",
+    )
+    list_filter = ("vote_choice", "motion_outcome", "was_decisive_vote", "aligned_with_majority", "voting_session_date")
+    search_fields = ("user__email", "motion_title", "meeting_title")
+    readonly_fields = ("id", "recorded_at")
+    raw_id_fields = ("user", "vote")
+    ordering = ("-voting_session_date",)

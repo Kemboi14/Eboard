@@ -1,0 +1,23 @@
+{% extends "base/base.html" %}
+
+{% block title %}Create Survey{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-6">
+        <a href="{% url 'survey:surveys' %}" class="text-blue-600 hover:text-blue-800">← Back to Surveys</a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-3xl font-bold text-gray-900 mb-6">Create New Survey</h1>
+
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                Create Survey
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

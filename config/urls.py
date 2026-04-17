@@ -20,11 +20,8 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
-from apps.accounts.enhanced_admin import enhanced_admin
-
 urlpatterns = [
-    path("admin/", enhanced_admin.urls),
-    path("legacy-admin/", admin.site.urls),
+    path("admin/", admin.site.urls),
     path("auth/", include("apps.accounts.urls")),
     path("", include("apps.dashboard.urls")),
     path("agencies/", include("apps.agencies.urls")),
@@ -42,6 +39,8 @@ urlpatterns = [
     path("organization/", include("apps.organization.urls")),
     path("calendar/", include("apps.calendar.urls")),
     path("recordings/", include("apps.recordings.urls")),
+    path("survey/", include("apps.survey.urls")),
+    path("messaging/", include("apps.messaging.urls")),
 ]
 
 # Serve media files during development

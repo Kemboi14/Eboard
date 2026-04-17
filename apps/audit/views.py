@@ -18,8 +18,9 @@ from django.utils.dateparse import parse_date
 
 from .models import AuditLog, AuditLogExport, AuditLogRetention
 from apps.accounts.permissions import VIEW_AUDIT
+from apps.accounts.mixins import BranchOrganizationFilterMixin
 
-class AuditLogListView(LoginRequiredMixin, ListView):
+class AuditLogListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
     """List and filter audit logs"""
     model = AuditLog
     template_name = 'audit/audit_list.html'
@@ -28,7 +29,25 @@ class AuditLogListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = AuditLog.objects.select_related('user', 'content_type').order_by('-timestamp')
-        
+
+        # Organization and branch filtering
+        # Audit logs may not have direct branch/organization fields, so filter by user's branch
+        branch_ids = self.get_user_branch_ids()
+
+        # Filter by user role within branch context
+        user = self.request.user
+        if user.role == "it_administrator":
+            pass  # See all audit logs
+        elif user.role in VIEW_AUDIT:
+            # Can see audit logs from users in their branches
+            if branch_ids:
+                queryset = queryset.filter(
+                    Q(user__userbranchmembership__branch_id__in=branch_ids)
+                ).distinct()
+        else:
+            # Other roles see only their own audit logs
+            queryset = queryset.filter(user=user)
+
         # Apply filters
         user_id = self.request.GET.get('user')
         if user_id:

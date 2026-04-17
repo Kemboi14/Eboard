@@ -602,6 +602,14 @@ class MeetingMinutes(models.Model):
         ("published", "Published"),
     ]
 
+    E_SIGNATURE_STATUS_CHOICES = [
+        ('not_required', 'Not Required'),
+        ('pending', 'Pending Signatures'),
+        ('partial', 'Partially Signed'),
+        ('complete', 'Fully Signed'),
+        ('failed', 'Failed'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     # ← fixed: was using default OneToOne accessor — now explicit related_name='minutes'
     meeting = models.OneToOneField(
@@ -653,6 +661,17 @@ class MeetingMinutes(models.Model):
     published_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # E-signature integration
+    e_signature_required = models.BooleanField(default=False, help_text="Require e-signatures for approval")
+    e_signature_status = models.CharField(max_length=20, choices=E_SIGNATURE_STATUS_CHOICES, default='not_required')
+    e_signature_deadline = models.DateTimeField(null=True, blank=True, help_text="Deadline for collecting signatures")
+    signatories = models.ManyToManyField(User, blank=True, related_name='minutes_to_sign', help_text="Users who need to sign")
+    
+    # External e-signature integration (DocuSign, Adobe Sign)
+    external_signature_id = models.CharField(max_length=200, blank=True, help_text="ID from external e-signature service")
+    external_signature_url = models.URLField(blank=True, help_text="URL to external signature document")
+    external_signature_provider = models.CharField(max_length=50, blank=True, help_text="e.g., docusign, adobe_sign")
+
     class Meta:
         verbose_name = "Meeting Minutes"
         verbose_name_plural = "Meeting Minutes"
@@ -671,6 +690,15 @@ class MeetingMinutes(models.Model):
     @property
     def can_be_approved(self):
         return self.status in ("submitted", "reviewed")
+    
+    @property
+    def e_signatures_complete(self):
+        """Check if all required signatures have been collected"""
+        if not self.e_signature_required:
+            return True
+        if self.e_signature_status == 'complete':
+            return True
+        return False
 
 
 class MeetingAttendance(models.Model):
@@ -756,6 +784,13 @@ class MeetingAction(models.Model):
         ("cancelled", "Cancelled"),
     ]
 
+    REMINDER_FREQUENCY_CHOICES = [
+        ("none", "No Reminders"),
+        ("daily", "Daily"),
+        ("weekly", "Weekly"),
+        ("bi_weekly", "Bi-Weekly"),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     meeting = models.ForeignKey(
         Meeting, on_delete=models.CASCADE, related_name="actions"
@@ -783,6 +818,13 @@ class MeetingAction(models.Model):
     completion_notes = models.TextField(blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
+    # Reminder settings
+    reminder_frequency = models.CharField(
+        max_length=20, choices=REMINDER_FREQUENCY_CHOICES, default="weekly"
+    )
+    reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    reminder_count = models.PositiveIntegerField(default=0)
+
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -805,3 +847,320 @@ class MeetingAction(models.Model):
         if self.due_date and self.status not in ("completed", "cancelled"):
             return self.due_date < timezone.now().date()
         return False
+
+    def send_reminder(self):
+        """Send reminder notification for this action item"""
+        if not self.assigned_to or self.status in ("completed", "cancelled"):
+            return False
+        
+        from apps.notifications.views import create_notification
+        
+        create_notification(
+            recipient=self.assigned_to,
+            title=f"Action Item Reminder: {self.title}",
+            message=f"Your action item '{self.title}' is due on {self.due_date}. Current status: {self.get_status_display()}.",
+            notification_type="system_update",
+            priority=self.priority,
+            action_url=f"/meetings/{self.meeting.id}/",
+        )
+        
+        self.reminder_sent_at = timezone.now()
+        self.reminder_count += 1
+        self.save(update_fields=['reminder_sent_at', 'reminder_count'])
+        
+        return True
+
+
+class QuorumCheck(models.Model):
+    """Track quorum checks for meetings"""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, related_name='quorum_checks')
+    
+    # Check details
+    checked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='quorum_checks')
+    checked_at = models.DateTimeField(auto_now_add=True)
+    
+    # Attendance at time of check
+    attendees_present = models.PositiveIntegerField(help_text="Number of attendees present")
+    attendees_list = models.ManyToManyField(User, blank=True, related_name='quorum_attendances')
+    
+    # Quorum status
+    quorum_met = models.BooleanField(help_text="Whether quorum was met at time of check")
+    quorum_required = models.PositiveIntegerField(help_text="Quorum requirement at time of check")
+    
+    # Notes
+    notes = models.TextField(blank=True, help_text="Notes about the quorum check")
+    
+    class Meta:
+        verbose_name = 'Quorum Check'
+        verbose_name_plural = 'Quorum Checks'
+        ordering = ['-checked_at']
+        indexes = [
+            models.Index(fields=['meeting', '-checked_at']),
+            models.Index(fields=['checked_by', '-checked_at']),
+        ]
+    
+    def __str__(self):
+        status = "Met" if self.quorum_met else "Not Met"
+        return f"{self.meeting.title} - Quorum {status} ({self.checked_at.strftime('%Y-%m-%d %H:%M')})"
+
+
+class AgendaComment(models.Model):
+    """Comments and collaboration on agenda items"""
+
+    COMMENT_TYPE_CHOICES = [
+        ('suggestion', 'Suggestion'),
+        ('question', 'Question'),
+        ('clarification', 'Clarification'),
+        ('approval', 'Approval'),
+        ('concern', 'Concern'),
+        ('general', 'General Comment'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    agenda_item = models.ForeignKey(AgendaItem, on_delete=models.CASCADE, related_name='comments')
+    
+    # Comment details
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='agenda_comments')
+    comment_type = models.CharField(max_length=20, choices=COMMENT_TYPE_CHOICES, default='general')
+    content = models.TextField(help_text="Comment content")
+    
+    # Resolution
+    resolved = models.BooleanField(default=False)
+    resolved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='resolved_agenda_comments')
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolution_notes = models.TextField(blank=True, help_text="Notes on how the comment was resolved")
+    
+    # Parent comment for threaded discussions
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
+    
+    # Attachments
+    attachments = models.ManyToManyField('documents.Document', blank=True, related_name='agenda_comments')
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Agenda Comment'
+        verbose_name_plural = 'Agenda Comments'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['agenda_item', '-created_at']),
+            models.Index(fields=['author', '-created_at']),
+            models.Index(fields=['resolved']),
+        ]
+    
+    def __str__(self):
+        return f"{self.author.get_full_name() if self.author else 'Unknown'} - {self.agenda_item.title}"
+    
+    def resolve(self, user, notes=''):
+        """Mark comment as resolved"""
+        self.resolved = True
+        self.resolved_by = user
+        self.resolved_at = timezone.now()
+        if notes:
+            self.resolution_notes = notes
+        self.save(update_fields=['resolved', 'resolved_by', 'resolved_at', 'resolution_notes', 'updated_at'])
+
+
+class AgendaSuggestion(models.Model):
+    """Suggested changes to agenda items"""
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+        ('deferred', 'Deferred'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    agenda_item = models.ForeignKey(AgendaItem, on_delete=models.CASCADE, related_name='suggestions')
+    
+    # Suggestion details
+    suggested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='agenda_suggestions')
+    field_name = models.CharField(max_length=100, help_text="Field being modified (e.g., title, description)")
+    original_value = models.TextField(help_text="Original value")
+    suggested_value = models.TextField(help_text="Suggested new value")
+    reason = models.TextField(help_text="Reason for the suggestion")
+    
+    # Review
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_agenda_suggestions')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_notes = models.TextField(blank=True, help_text="Notes on the review decision")
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Agenda Suggestion'
+        verbose_name_plural = 'Agenda Suggestions'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['agenda_item', '-created_at']),
+            models.Index(fields=['suggested_by', '-created_at']),
+            models.Index(fields=['status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.suggested_by.get_full_name() if self.suggested_by else 'Unknown'} - {self.field_name}"
+    
+    def accept(self, reviewer, notes=''):
+        """Accept the suggestion and apply the change"""
+        self.status = 'accepted'
+        self.reviewed_by = reviewer
+        self.reviewed_at = timezone.now()
+        if notes:
+            self.review_notes = notes
+        self.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_notes', 'updated_at'])
+        
+        # Apply the change to the agenda item
+        setattr(self.agenda_item, self.field_name, self.suggested_value)
+        self.agenda_item.save(update_fields=[self.field_name, 'updated_at'])
+    
+    def reject(self, reviewer, notes=''):
+        """Reject the suggestion"""
+        self.status = 'rejected'
+        self.reviewed_by = reviewer
+        self.reviewed_at = timezone.now()
+        if notes:
+            self.review_notes = notes
+        self.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_notes', 'updated_at'])
+
+
+class BoardPack(models.Model):
+    """Board pack (meeting materials) generation and distribution"""
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('generating', 'Generating'),
+        ('ready', 'Ready'),
+        ('distributed', 'Distributed'),
+        ('archived', 'Archived'),
+    ]
+
+    DISTRIBUTION_METHOD_CHOICES = [
+        ('email', 'Email'),
+        ('portal', 'Portal'),
+        ('both', 'Email and Portal'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    meeting = models.OneToOneField(Meeting, on_delete=models.CASCADE, related_name='board_pack')
+    
+    # Pack details
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    
+    # Distribution
+    distribution_method = models.CharField(max_length=20, choices=DISTRIBUTION_METHOD_CHOICES, default='portal')
+    distribution_date = models.DateTimeField(null=True, blank=True)
+    
+    # Recipients
+    recipients = models.ManyToManyField(User, blank=True, related_name='board_packs')
+    cc_recipients = models.ManyToManyField(User, blank=True, related_name='cc_board_packs')
+    
+    # Documents included
+    documents = models.ManyToManyField('documents.Document', blank=True, related_name='board_packs')
+    
+    # Generated pack file
+    pack_file = models.FileField(upload_to='board_packs/', null=True, blank=True)
+    pack_size = models.PositiveIntegerField(null=True, blank=True, help_text="Size in bytes")
+    
+    # Cover page
+    include_cover_page = models.BooleanField(default=True)
+    cover_title = models.CharField(max_length=200, blank=True)
+    cover_message = models.TextField(blank=True)
+    
+    # Table of contents
+    include_toc = models.BooleanField(default=True)
+    
+    # Version
+    version = models.PositiveIntegerField(default=1)
+    
+    # Notifications
+    send_notification = models.BooleanField(default=True)
+    notification_message = models.TextField(blank=True)
+    
+    # Tracking
+    view_count = models.PositiveIntegerField(default=0)
+    download_count = models.PositiveIntegerField(default=0)
+    
+    # Author
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_board_packs')
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    generated_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        verbose_name = 'Board Pack'
+        verbose_name_plural = 'Board Packs'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['meeting', '-created_at']),
+            models.Index(fields=['status']),
+            models.Index(fields=['distribution_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.title} - {self.meeting.title}"
+    
+    @property
+    def is_ready(self):
+        """Check if pack is ready for distribution"""
+        return self.status in ('ready', 'distributed', 'archived')
+    
+    @property
+    def file_size_display(self):
+        """Display file size in human-readable format"""
+        if not self.pack_size:
+            return "N/A"
+        if self.pack_size < 1024:
+            return f"{self.pack_size} B"
+        elif self.pack_size < 1024**2:
+            return f"{self.pack_size / 1024:.1f} KB"
+        elif self.pack_size < 1024**3:
+            return f"{self.pack_size / 1024**2:.1f} MB"
+        return f"{self.pack_size / 1024**3:.1f} GB"
+
+
+class BoardPackAccessLog(models.Model):
+    """Track access and downloads of board packs"""
+
+    ACTION_CHOICES = [
+        ('viewed', 'Viewed'),
+        ('downloaded', 'Downloaded'),
+        ('emailed', 'Emailed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    board_pack = models.ForeignKey(BoardPack, on_delete=models.CASCADE, related_name='access_logs')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='board_pack_access_logs')
+    
+    # Access details
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    
+    # Timestamp
+    accessed_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Board Pack Access Log'
+        verbose_name_plural = 'Board Pack Access Logs'
+        ordering = ['-accessed_at']
+        indexes = [
+            models.Index(fields=['board_pack', '-accessed_at']),
+            models.Index(fields=['user', '-accessed_at']),
+            models.Index(fields=['action']),
+        ]
+    
+    def __str__(self):
+        user = self.user.get_full_name() if self.user else 'Anonymous'
+        return f"{user} - {self.get_action_display()} - {self.board_pack.title}"

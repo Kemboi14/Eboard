@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User
+from .models import User, Language, Translation
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
@@ -14,12 +14,24 @@ class CustomUserAdmin(UserAdmin):
         ('Personal info', {'fields': ('first_name', 'last_name', 'phone_number', 'profile_photo')}),
         ('Professional info', {'fields': ('role', 'department', 'job_title')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
-        ('Security', {'fields': ('mfa_enabled',)}),
     )
+
+
+@admin.register(Language)
+class LanguageAdmin(admin.ModelAdmin):
+    list_display = ['name', 'native_name', 'code', 'locale_code', 'direction', 'status']
+    list_filter = ['status', 'direction']
+    search_fields = ['name', 'native_name', 'code']
+    ordering = ['name']
+
+
+@admin.register(Translation)
+class TranslationAdmin(admin.ModelAdmin):
+    list_display = ['key', 'module', 'context', 'get_translation_count']
+    list_filter = ['module', 'context']
+    search_fields = ['key', 'module', 'context']
+    ordering = ['key']
     
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('email', 'first_name', 'last_name', 'role', 'password1', 'password2'),
-        }),
-    )
+    def get_translation_count(self, obj):
+        return len(obj.translations)
+    get_translation_count.short_description = 'Languages'

@@ -8,9 +8,12 @@ from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
+import requests
+import json
 
 from apps.accounts.decorators import role_required
 from apps.accounts.permissions import CAN_VOTE, MANAGE_MEETINGS
+from apps.accounts.mixins import BranchOrganizationFilterMixin
 
 from .forms import (
     AgendaItemForm,
@@ -26,14 +29,197 @@ from .models import (
     MeetingAction,
     MeetingAttendance,
     MeetingMinutes,
+    VideoConferenceSession,
+    AgendaSuggestion,
+    BoardPack,
+    BoardPackAccessLog,
 )
 from apps.recordings.models import MeetingRecording
 import uuid
+from django.conf import settings
+
+
+# ─── Video Conferencing Integration ────────────────────────────────────────────
+
+@login_required
+@require_POST
+def create_zoom_meeting(request, meeting_id):
+    """Create a Zoom meeting for the specified meeting"""
+    meeting = get_object_or_404(Meeting, pk=meeting_id)
+    
+    if request.user.role not in MANAGE_MEETINGS:
+        messages.error(request, "You don't have permission to create video conferences.")
+        return redirect('meetings:detail', pk=meeting_id)
+    
+    # Check if Zoom credentials are configured
+    zoom_api_key = getattr(settings, 'ZOOM_API_KEY', None)
+    zoom_api_secret = getattr(settings, 'ZOOM_API_SECRET', None)
+    
+    if not zoom_api_key or not zoom_api_secret:
+        messages.error(request, "Zoom integration is not configured. Please contact your administrator.")
+        return redirect('meetings:detail', pk=meeting_id)
+    
+    try:
+        # Create Zoom meeting via API
+        import jwt
+        import time
+        
+        # Generate JWT token for Zoom API
+        token_payload = {
+            'iss': zoom_api_key,
+            'exp': int(time.time() + 3600)
+        }
+        token = jwt.encode(token_payload, zoom_api_secret, algorithm='HS256')
+        
+        headers = {
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        }
+        
+        meeting_data = {
+            'topic': meeting.title,
+            'type': 2,  # Scheduled meeting
+            'start_time': meeting.scheduled_date.strftime('%Y-%m-%dT%H:%M:%S'),
+            'duration': int((meeting.scheduled_end_time - meeting.scheduled_date).total_seconds() / 60),
+            'timezone': meeting.timezone_display or 'Africa/Nairobi',
+            'agenda': meeting.description or '',
+            'settings': {
+                'host_video': True,
+                'participant_video': True,
+                'join_before_host': False,
+                'mute_upon_entry': False,
+                'watermark': False,
+                'use_pmi': False,
+                'approval_type': 0,
+                'audio': 'both',
+                'auto_recording': 'cloud',
+                'enforce_login': False,
+                'enforce_login_domains': '',
+                'alternative_hosts': '',
+                'close_registration': True,
+            }
+        }
+        
+        response = requests.post(
+            'https://api.zoom.us/v2/users/me/meetings',
+            headers=headers,
+            json=meeting_data
+        )
+        
+        if response.status_code == 201:
+            zoom_data = response.json()
+            
+            # Create video conference session record
+            session = VideoConferenceSession.objects.create(
+                meeting=meeting,
+                session_id=zoom_data['id'],
+                platform='zoom',
+                platform_data={
+                    'join_url': zoom_data['join_url'],
+                    'start_url': zoom_data['start_url'],
+                    'password': zoom_data.get('password', ''),
+                    'meeting_id': zoom_data['id'],
+                }
+            )
+            
+            messages.success(request, "Zoom meeting created successfully.")
+            return redirect('meetings:detail', pk=meeting_id)
+        else:
+            messages.error(request, f"Failed to create Zoom meeting: {response.text}")
+            return redirect('meetings:detail', pk=meeting_id)
+            
+    except Exception as e:
+        messages.error(request, f"Error creating Zoom meeting: {str(e)}")
+        return redirect('meetings:detail', pk=meeting_id)
+
+
+@login_required
+@require_POST
+def create_teams_meeting(request, meeting_id):
+    """Create a Microsoft Teams meeting for the specified meeting"""
+    meeting = get_object_or_404(Meeting, pk=meeting_id)
+    
+    if request.user.role not in MANAGE_MEETINGS:
+        messages.error(request, "You don't have permission to create video conferences.")
+        return redirect('meetings:detail', pk=meeting_id)
+    
+    # Check if Teams credentials are configured
+    teams_client_id = getattr(settings, 'TEAMS_CLIENT_ID', None)
+    teams_client_secret = getattr(settings, 'TEAMS_CLIENT_SECRET', None)
+    teams_tenant_id = getattr(settings, 'TEAMS_TENANT_ID', None)
+    
+    if not teams_client_id or not teams_client_secret or not teams_tenant_id:
+        messages.error(request, "Teams integration is not configured. Please contact your administrator.")
+        return redirect('meetings:detail', pk=meeting_id)
+    
+    try:
+        # Get access token for Microsoft Graph API
+        token_response = requests.post(
+            f'https://login.microsoftonline.com/{teams_tenant_id}/oauth2/v2.0/token',
+            data={
+                'client_id': teams_client_id,
+                'client_secret': teams_client_secret,
+                'grant_type': 'client_credentials',
+                'scope': 'https://graph.microsoft.com/.default'
+            }
+        )
+        
+        if token_response.status_code != 200:
+            messages.error(request, "Failed to authenticate with Microsoft Teams.")
+            return redirect('meetings:detail', pk=meeting_id)
+        
+        token_data = token_response.json()
+        access_token = token_data['access_token']
+        
+        # Create online meeting
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        meeting_data = {
+            'subject': meeting.title,
+            'startDateTime': meeting.scheduled_date.strftime('%Y-%m-%dT%H:%M:%S'),
+            'endDateTime': meeting.scheduled_end_time.strftime('%Y-%m-%dT%H:%M:%S'),
+            'isEntryAllowedAnnounced': True,
+            'allowAttendeeToEnableMic': True,
+            'allowAttendeeToEnableCamera': True,
+        }
+        
+        response = requests.post(
+            'https://graph.microsoft.com/v1.0/onlineMeetings',
+            headers=headers,
+            json=meeting_data
+        )
+        
+        if response.status_code == 201:
+            teams_data = response.json()
+            
+            # Create video conference session record
+            session = VideoConferenceSession.objects.create(
+                meeting=meeting,
+                session_id=teams_data['id'],
+                platform='teams',
+                platform_data={
+                    'join_url': teams_data['joinUrl'],
+                    'meeting_id': teams_data['id'],
+                }
+            )
+            
+            messages.success(request, "Teams meeting created successfully.")
+            return redirect('meetings:detail', pk=meeting_id)
+        else:
+            messages.error(request, f"Failed to create Teams meeting: {response.text}")
+            return redirect('meetings:detail', pk=meeting_id)
+            
+    except Exception as e:
+        messages.error(request, f"Error creating Teams meeting: {str(e)}")
+        return redirect('meetings:detail', pk=meeting_id)
 
 # ─── Meeting List ────────────────────────────────────────────────────────────
 
 
-class MeetingListView(LoginRequiredMixin, ListView):
+class MeetingListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
     """List view for meetings with role-based filtering and stats."""
 
     model = Meeting
@@ -45,9 +231,12 @@ class MeetingListView(LoginRequiredMixin, ListView):
         user = self.request.user
         qs = Meeting.objects.select_related("organizer", "branch", "committee")
 
-        # Role-based filtering
+        # Organization and branch filtering
+        qs = self.filter_queryset_by_branch(qs)
+
+        # Role-based filtering within branch context
         if user.role in MANAGE_MEETINGS:
-            pass  # See all meetings
+            pass  # See all meetings in their branches
         elif user.role == "board_member":
             qs = qs.filter(
                 Q(attendees=user) | Q(required_attendees=user) | Q(organizer=user)
@@ -872,3 +1061,111 @@ def create_meeting_recording(request, pk):
     
     messages.success(request, "Recording created successfully. Processing will begin shortly.")
     return redirect("meetings:meeting_detail", pk=pk)
+
+
+# ─── Agenda Collaboration Views ────────────────────────────────────────────────
+
+class AgendaSuggestionCreateView(LoginRequiredMixin, CreateView):
+    """Create a new agenda suggestion"""
+    model = AgendaSuggestion
+    template_name = 'meetings/agenda_suggestion_form.html'
+    fields = ['agenda_item', 'field_name', 'original_value', 'suggested_value', 'reason']
+    
+    def get_success_url(self):
+        return reverse('meetings:meeting_detail', kwargs={'pk': self.object.agenda_item.meeting.pk})
+    
+    def form_valid(self, form):
+        form.instance.suggested_by = self.request.user
+        messages.success(self.request, 'Suggestion submitted successfully.')
+        return super().form_valid(form)
+
+
+@login_required
+@require_POST
+def accept_agenda_suggestion(request, pk):
+    """Accept an agenda suggestion"""
+    suggestion = get_object_or_404(AgendaSuggestion, pk=pk)
+    if request.user.role not in MANAGE_MEETINGS:
+        messages.error(request, "You don't have permission to accept suggestions.")
+        return redirect('meetings:agenda_collaboration_detail', pk=suggestion.agenda_item.agenda_collaboration.pk)
+    
+    suggestion.accept(request.user)
+    messages.success(request, 'Suggestion accepted and applied.')
+    return redirect('meetings:agenda_collaboration_detail', pk=suggestion.agenda_item.agenda_collaboration.pk)
+
+
+@login_required
+@require_POST
+def reject_agenda_suggestion(request, pk):
+    """Reject an agenda suggestion"""
+    suggestion = get_object_or_404(AgendaSuggestion, pk=pk)
+    if request.user.role not in MANAGE_MEETINGS:
+        messages.error(request, "You don't have permission to reject suggestions.")
+        return redirect('meetings:agenda_collaboration_detail', pk=suggestion.agenda_item.agenda_collaboration.pk)
+    
+    suggestion.reject(request.user)
+    messages.success(request, 'Suggestion rejected.')
+    return redirect('meetings:agenda_collaboration_detail', pk=suggestion.agenda_item.agenda_collaboration.pk)
+
+
+# ─── Board Pack Views ───────────────────────────────────────────────────────────
+
+class BoardPackListView(LoginRequiredMixin, ListView):
+    """List all board packs"""
+    model = BoardPack
+    template_name = 'meetings/board_packs.html'
+    context_object_name = 'packs'
+    ordering = ['-created_at']
+
+
+class BoardPackDetailView(LoginRequiredMixin, DetailView):
+    """View board pack details"""
+    model = BoardPack
+    template_name = 'meetings/board_pack_detail.html'
+    context_object_name = 'pack'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        pack = self.object
+        context['access_logs'] = pack.access_logs.all()[:20]
+        context['can_edit'] = self.request.user.role in MANAGE_MEETINGS
+        return context
+
+
+class BoardPackCreateView(LoginRequiredMixin, CreateView):
+    """Create a new board pack"""
+    model = BoardPack
+    template_name = 'meetings/board_pack_form.html'
+    fields = ['meeting', 'title', 'description', 'distribution_method', 'recipients', 'documents', 'include_cover_page', 'cover_title', 'cover_message', 'include_toc', 'send_notification', 'notification_message']
+    success_url = reverse_lazy('meetings:board_packs')
+    
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        form.instance.status = 'generating'
+        messages.success(self.request, 'Board pack created. Generation will begin shortly.')
+        return super().form_valid(form)
+
+
+@login_required
+@require_POST
+def distribute_board_pack(request, pk):
+    """Distribute a board pack"""
+    pack = get_object_or_404(BoardPack, pk=pk)
+    if request.user.role not in MANAGE_MEETINGS:
+        messages.error(request, "You don't have permission to distribute board packs.")
+        return redirect('meetings:board_pack_detail', pk=pk)
+    
+    pack.status = 'distributed'
+    pack.distribution_date = timezone.now()
+    pack.save()
+    
+    # Log the distribution
+    BoardPackAccessLog.objects.create(
+        board_pack=pack,
+        user=request.user,
+        action='emailed',
+        ip_address=request.META.get('REMOTE_ADDR'),
+    )
+    
+    messages.success(request, 'Board pack distributed successfully.')
+    return redirect('meetings:board_pack_detail', pk=pk)

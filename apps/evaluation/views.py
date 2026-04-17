@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from apps.accounts.mixins import BranchOrganizationFilterMixin
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Avg, Count, F, Q
@@ -188,7 +189,7 @@ def generate_predictive_insights(evaluations):
 # ... rest of views ...
 
 
-class EvaluationListView(LoginRequiredMixin, ListView):
+class EvaluationListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
     """List all evaluations with filtering"""
 
     model = Evaluation
@@ -201,14 +202,24 @@ class EvaluationListView(LoginRequiredMixin, ListView):
             "template", "evaluator", "evaluatee", "reviewed_by"
         ).prefetch_related("answers", "comments")
 
-        # Filter by user role
+        # Organization and branch filtering
+        # Evaluations may not have direct branch/organization fields, so filter by evaluator/evaluatee
+        branch_ids = self.get_user_branch_ids()
+
+        # Filter by user role within branch context
         user = self.request.user
-        if user.role == "board_member":
+        if user.role == "it_administrator":
+            pass  # See all evaluations
+        elif user.role == "board_member":
             # Board members can see evaluations they're involved in
             queryset = queryset.filter(Q(evaluator=user) | Q(evaluatee=user))
         elif user.role in ["company_secretary", "compliance_officer"]:
-            # Can see all evaluations
-            pass
+            # Can see all evaluations in their branches
+            if branch_ids:
+                queryset = queryset.filter(
+                    Q(evaluator__userbranchmembership__branch_id__in=branch_ids) |
+                    Q(evaluatee__userbranchmembership__branch_id__in=branch_ids)
+                )
         else:
             # Other roles see nothing
             queryset = queryset.none()
@@ -577,7 +588,7 @@ def review_evaluation(request, pk):
 
 
 # Template Management
-class TemplateListView(LoginRequiredMixin, ListView):
+class TemplateListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
     """List evaluation templates"""
 
     model = EvaluationTemplate
@@ -586,10 +597,14 @@ class TemplateListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role in ["company_secretary", "compliance_officer"]:
-            return EvaluationTemplate.objects.all()
+        queryset = EvaluationTemplate.objects.select_related("created_by")
+
+        # Templates are generally organization-wide, so no branch filtering needed
+        # Role-based filtering
+        if user.role in ["it_administrator", "company_secretary", "compliance_officer"]:
+            return queryset
         else:
-            return EvaluationTemplate.objects.filter(is_public=True)
+            return queryset.filter(is_public=True)
 
 
 class TemplateDetailView(LoginRequiredMixin, DetailView):
@@ -772,7 +787,7 @@ def populate_professional_templates(request):
 
 
 # Cycle Management
-class CycleListView(LoginRequiredMixin, ListView):
+class CycleListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
     """List evaluation cycles"""
 
     model = EvaluationCycle
@@ -780,11 +795,27 @@ class CycleListView(LoginRequiredMixin, ListView):
     context_object_name = "cycles"
 
     def get_queryset(self):
-        if self.request.user.role in ["company_secretary", "compliance_officer"]:
-            return EvaluationCycle.objects.all()
+        user = self.request.user
+        queryset = EvaluationCycle.objects.select_related("created_by").prefetch_related("participants")
+
+        # Organization and branch filtering
+        # Filter cycles where user is a participant or created by user in their branch
+        branch_ids = self.get_user_branch_ids()
+
+        if user.role == "it_administrator":
+            return queryset
+        elif user.role in ["company_secretary", "compliance_officer"]:
+            # Can see cycles in their branches
+            if branch_ids:
+                queryset = queryset.filter(
+                    Q(participants__userbranchmembership__branch_id__in=branch_ids) |
+                    Q(created_by__userbranchmembership__branch_id__in=branch_ids)
+                ).distinct()
+            return queryset
         else:
-            return EvaluationCycle.objects.filter(
-                participants=self.request.user, is_active=True
+            # Participants can see cycles they're involved in
+            return queryset.filter(
+                participants=user, is_active=True
             )
 
 

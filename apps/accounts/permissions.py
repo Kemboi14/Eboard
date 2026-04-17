@@ -22,6 +22,9 @@ MANAGE_DOCUMENTS = ['company_secretary', 'it_administrator']
 # Administrative roles
 ADMIN_ROLES = ['it_administrator']
 
+# Board panel access
+BOARD_PANEL_ROLES = ['it_administrator', 'company_secretary', 'executive_management', 'compliance_officer', 'board_member']
+
 # All available roles
 ALL_ROLES = [
     'board_member',

@@ -14,8 +14,9 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import Policy, PolicyCategory, PolicyReview, PolicyAcknowledgment
 from .forms import PolicyForm, PolicyCategoryForm, PolicyReviewForm, PolicySearchForm, PolicyVersionForm
 from apps.accounts.permissions import CAN_MANAGE_POLICIES
+from apps.accounts.mixins import BranchOrganizationFilterMixin
 
-class PolicyListView(LoginRequiredMixin, ListView):
+class PolicyListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
     """List all policies with search and filtering"""
     model = Policy
     template_name = 'policy/policy_list.html'
@@ -24,7 +25,26 @@ class PolicyListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = Policy.objects.select_related('category', 'policy_owner', 'created_by').prefetch_related('acknowledgments')
-        
+
+        # Organization and branch filtering
+        # Policies may not have direct branch/organization fields, so filter by policy owner
+        branch_ids = self.get_user_branch_ids()
+
+        # Filter by user role within branch context
+        user = self.request.user
+        if user.role == "it_administrator":
+            pass  # See all policies
+        elif user.role in CAN_MANAGE_POLICIES:
+            # Can see policies in their branches
+            if branch_ids:
+                queryset = queryset.filter(
+                    Q(policy_owner__userbranchmembership__branch_id__in=branch_ids) |
+                    Q(category__access_level='public')
+                ).distinct()
+        else:
+            # Other roles see only public policies
+            queryset = queryset.filter(status='published', category__access_level='public')
+
         # Apply search filter
         search = self.request.GET.get('search')
         if search:
@@ -33,17 +53,17 @@ class PolicyListView(LoginRequiredMixin, ListView):
                 Q(description__icontains=search) |
                 Q(content__icontains=search)
             )
-        
+
         # Apply category filter
         category_id = self.request.GET.get('category')
         if category_id:
             queryset = queryset.filter(category_id=category_id)
-        
+
         # Apply category type filter
         category_type = self.request.GET.get('category_type')
         if category_type:
             queryset = queryset.filter(category_type=category_type)
-        
+
         # Apply status filter
         status = self.request.GET.get('status')
         if status:
@@ -259,14 +279,24 @@ def policy_dashboard(request):
     
     return render(request, 'policy/policy_dashboard.html', context)
 
-class CategoryListView(LoginRequiredMixin, ListView):
+class CategoryListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
     """List policy categories"""
     model = PolicyCategory
     template_name = 'policy/category_list.html'
     context_object_name = 'categories'
 
     def get_queryset(self):
-        return PolicyCategory.objects.select_related('parent').prefetch_related('children')
+        user = self.request.user
+        queryset = PolicyCategory.objects.select_related('parent').prefetch_related('children')
+
+        # Categories are generally organization-wide, so no branch filtering needed
+        # Role-based filtering
+        if user.role == "it_administrator":
+            return queryset
+        elif user.role in CAN_MANAGE_POLICIES:
+            return queryset.filter(is_active=True)
+        else:
+            return queryset.filter(is_active=True, is_public=True)
 
 class CategoryCreateView(LoginRequiredMixin, CreateView):
     """Create a new policy category"""

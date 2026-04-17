@@ -49,4 +49,18 @@ urlpatterns = [
     ),
     # AI Recording
     path("<uuid:pk>/recording/create/", views.create_meeting_recording, name="create_recording"),
+    # Video Conferencing
+    path("<uuid:pk>/video/zoom/", views.create_zoom_meeting, name="create_zoom_meeting"),
+    path("<uuid:pk>/video/teams/", views.create_teams_meeting, name="create_teams_meeting"),
+    
+    # Agenda Suggestions
+    path("agenda-suggestions/create/", views.AgendaSuggestionCreateView.as_view(), name="agenda_suggestion_create"),
+    path("agenda-suggestions/<uuid:pk>/accept/", views.accept_agenda_suggestion, name="accept_suggestion"),
+    path("agenda-suggestions/<uuid:pk>/reject/", views.reject_agenda_suggestion, name="reject_suggestion"),
+    
+    # Board Packs
+    path("board-packs/", views.BoardPackListView.as_view(), name="board_packs"),
+    path("board-packs/<uuid:pk>/", views.BoardPackDetailView.as_view(), name="board_pack_detail"),
+    path("board-packs/create/", views.BoardPackCreateView.as_view(), name="board_pack_create"),
+    path("board-packs/<uuid:pk>/distribute/", views.distribute_board_pack, name="distribute_board_pack"),
 ]

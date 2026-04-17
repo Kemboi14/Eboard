@@ -20,6 +20,7 @@ def user_permissions(request):
         "can_manage_documents": role in MANAGE_DOCUMENTS,
         "is_admin": role in ADMIN_ROLES,
         "mfa_required": role in MFA_REQUIRED_ROLES,
+        "can_access_board_panel": role in BOARD_PANEL_ROLES,
     }
 
     # -------------------------------------------------------------------

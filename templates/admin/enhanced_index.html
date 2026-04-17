@@ -21,7 +21,7 @@
 {% endblock %} {% block nav-global %} {% if user.is_authenticated %}
 <div id="user-tools">
     <span style="margin-right: 16px">
-        <strong>{{ user.get_full_name|default:user.username }}</strong>
+        <strong>{{ user.get_full_name|default:user.email }}</strong>
         <span style="color: #6c757d; margin-left: 8px">
             {{ user.role|title }}
         </span>
@@ -71,7 +71,7 @@
         </div>
 
         <div class="app-list__item">
-            <a href="{% url 'admin:accounts_user_changelist' %}">
+            <a href="/admin/accounts/user/">
                 <svg
                     class="icon"
                     width="16"
@@ -88,7 +88,7 @@
         </div>
 
         <div class="app-list__item">
-            <a href="{% url 'admin:evaluation_evaluation_changelist' %}">
+            <a href="/admin/evaluation/evaluation/">
                 <svg
                     class="icon"
                     width="16"
@@ -105,7 +105,7 @@
         </div>
 
         <div class="app-list__item">
-            <a href="{% url 'admin:meetings_meeting_changelist' %}">
+            <a href="/admin/meetings/meeting/">
                 <svg
                     class="icon"
                     width="16"
@@ -122,7 +122,7 @@
         </div>
 
         <div class="app-list__item">
-            <a href="{% url 'admin:documents_document_changelist' %}">
+            <a href="/admin/documents/document/">
                 <svg
                     class="icon"
                     width="16"
@@ -139,7 +139,7 @@
         </div>
 
         <div class="app-list__item">
-            <a href="{% url 'admin:voting_motion_changelist' %}">
+            <a href="/admin/voting/motion/">
                 <svg
                     class="icon"
                     width="16"
@@ -156,7 +156,7 @@
         </div>
 
         <div class="app-list__item">
-            <a href="{% url 'admin:discussions_discussionpost_changelist' %}">
+            <a href="/admin/discussions/discussionpost/">
                 <svg
                     class="icon"
                     width="16"
@@ -173,7 +173,7 @@
         </div>
 
         <div class="app-list__item">
-            <a href="{% url 'admin:audit_auditlog_changelist' %}">
+            <a href="/admin/audit/auditlog/">
                 <svg
                     class="icon"
                     width="16"
@@ -218,7 +218,7 @@
             "
         >
             <a
-                href="{% url 'admin:accounts_user_changelist' %}"
+                href="/admin/accounts/user/"
                 style="
                     background: white;
                     padding: 20px;
@@ -247,7 +247,7 @@
             </a>
 
             <a
-                href="{% url 'admin:evaluation_evaluation_changelist' %}"
+                href="/admin/evaluation/evaluation/"
                 style="
                     background: white;
                     padding: 20px;
@@ -276,7 +276,7 @@
             </a>
 
             <a
-                href="{% url 'admin:meetings_meeting_changelist' %}"
+                href="/admin/meetings/meeting/"
                 style="
                     background: white;
                     padding: 20px;
@@ -305,7 +305,7 @@
             </a>
 
             <a
-                href="{% url 'admin:documents_document_changelist' %}"
+                href="/admin/documents/document/"
                 style="
                     background: white;
                     padding: 20px;

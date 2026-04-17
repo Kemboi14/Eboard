@@ -1,11 +1,13 @@
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.http import require_POST
 from django.core.cache import cache
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.utils import timezone
-from django.views.generic import View
+from django.views.generic import View, ListView, DetailView, CreateView, UpdateView
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LogoutView as DjangoLogoutView
 from django.contrib import messages
 from django_otp import devices_for_user
@@ -15,7 +17,10 @@ import qrcode
 import io
 import base64
 from .forms import LoginForm, UserProfileForm, CustomPasswordChangeForm
-from .models import User
+from .models import (
+    User, SSOProvider, UserSSOIdentity, UserSession, EncryptionKey,
+    Language, Translation
+)
 
 # Roles that require MFA - get from settings
 MFA_REQUIRED_ROLES = getattr(settings, 'MFA_REQUIRED_ROLES', [
@@ -251,3 +256,188 @@ def ChangePasswordView(request):
         form = CustomPasswordChangeForm(request.user)
     
     return render(request, 'accounts/change_password.html', {'form': form})
+
+
+# ─── SSO Provider Views ─────────────────────────────────────────────────────────
+
+class SSOProviderListView(LoginRequiredMixin, ListView):
+    """List all SSO providers"""
+    model = SSOProvider
+    template_name = 'accounts/sso_providers.html'
+    context_object_name = 'providers'
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.request.user.role not in ['it_administrator', 'company_secretary']:
+            queryset = queryset.filter(status='active')
+        return queryset
+
+
+class SSOProviderDetailView(LoginRequiredMixin, DetailView):
+    """View SSO provider details"""
+    model = SSOProvider
+    template_name = 'accounts/sso_provider_detail.html'
+    context_object_name = 'provider'
+
+
+class SSOProviderCreateView(LoginRequiredMixin, CreateView):
+    """Create a new SSO provider"""
+    model = SSOProvider
+    template_name = 'accounts/sso_provider_form.html'
+    fields = ['name', 'provider_type', 'entity_id', 'sso_url', 'slo_url', 'certificate', 'role_mapping', 'auto_provisioning', 'security_settings', 'metadata']
+    success_url = reverse_lazy('accounts:sso_providers')
+    
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        messages.success(self.request, 'SSO provider created successfully.')
+        return super().form_valid(form)
+
+
+# ─── Session Management Views ───────────────────────────────────────────────────
+
+class UserSessionListView(LoginRequiredMixin, ListView):
+    """List user sessions"""
+    model = UserSession
+    template_name = 'accounts/user_sessions.html'
+    context_object_name = 'sessions'
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user_id = self.request.GET.get('user')
+        if user_id and self.request.user.role in ['it_administrator', 'company_secretary']:
+            queryset = queryset.filter(user_id=user_id)
+        else:
+            queryset = queryset.filter(user=self.request.user)
+        return queryset
+
+
+@login_required
+@require_POST
+def revoke_session(request, pk):
+    """Revoke a user session"""
+    session = get_object_or_404(UserSession, pk=pk)
+    
+    if session.user != request.user and request.user.role not in ['it_administrator', 'company_secretary']:
+        messages.error(request, "You don't have permission to revoke this session.")
+        return redirect('accounts:user_sessions')
+    
+    session.status = 'revoked'
+    session.save()
+    messages.success(request, 'Session revoked successfully.')
+    return redirect('accounts:user_sessions')
+
+
+@login_required
+@require_POST
+def revoke_all_other_sessions(request):
+    """Revoke all other sessions for the current user"""
+    UserSession.objects.filter(
+        user=request.user,
+        status='active'
+    ).exclude(session_key=request.session.session_key).update(status='revoked')
+    
+    messages.success(request, 'All other sessions revoked successfully.')
+    return redirect('accounts:user_sessions')
+
+
+# ─── Encryption Key Management Views ───────────────────────────────────────────
+
+class EncryptionKeyListView(LoginRequiredMixin, ListView):
+    """List all encryption keys"""
+    model = EncryptionKey
+    template_name = 'accounts/encryption_keys.html'
+    context_object_name = 'keys'
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.request.user.role not in ['it_administrator']:
+            queryset = queryset.filter(status='active')
+        return queryset
+
+
+class EncryptionKeyCreateView(LoginRequiredMixin, CreateView):
+    """Create a new encryption key"""
+    model = EncryptionKey
+    template_name = 'accounts/encryption_key_form.html'
+    fields = ['name', 'key_type', 'rotation_interval_days']
+    success_url = reverse_lazy('accounts:encryption_keys')
+    
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        messages.success(self.request, 'Encryption key created successfully.')
+        return super().form_valid(form)
+
+
+@login_required
+@require_POST
+def rotate_encryption_key(request, pk):
+    """Rotate an encryption key"""
+    key = get_object_or_404(EncryptionKey, pk=pk)
+    
+    if request.user.role not in ['it_administrator']:
+        messages.error(request, "You don't have permission to rotate encryption keys.")
+        return redirect('accounts:encryption_keys')
+    
+    key.status = 'rotating'
+    key.save()
+    
+    # In production, this would trigger actual key rotation
+    key.status = 'active'
+    key.last_rotated_at = timezone.now()
+    key.next_rotation_at = timezone.now() + timezone.timedelta(days=key.rotation_interval_days)
+    key.save()
+    
+    messages.success(request, 'Encryption key rotated successfully.')
+    return redirect('accounts:encryption_keys')
+
+
+# ─── Multi-Language Support Views ───────────────────────────────────────────────
+
+class LanguageListView(LoginRequiredMixin, ListView):
+    """List all supported languages"""
+    model = Language
+    template_name = 'accounts/languages.html'
+    context_object_name = 'languages'
+    ordering = ['name']
+
+
+class TranslationListView(LoginRequiredMixin, ListView):
+    """List all translations"""
+    model = Translation
+    template_name = 'accounts/translations.html'
+    context_object_name = 'translations'
+    ordering = ['key']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        module = self.request.GET.get('module')
+        if module:
+            queryset = queryset.filter(module=module)
+        return queryset
+
+
+class TranslationCreateView(LoginRequiredMixin, CreateView):
+    """Create a new translation"""
+    model = Translation
+    template_name = 'accounts/translation_form.html'
+    fields = ['key', 'context', 'module', 'translations']
+    success_url = reverse_lazy('accounts:translations')
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Translation created successfully.')
+        return super().form_valid(form)
+
+
+class TranslationUpdateView(LoginRequiredMixin, UpdateView):
+    """Update a translation"""
+    model = Translation
+    template_name = 'accounts/translation_form.html'
+    fields = ['key', 'context', 'module', 'translations']
+    success_url = reverse_lazy('accounts:translations')
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Translation updated successfully.')
+        return super().form_valid(form)

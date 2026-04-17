@@ -24,6 +24,11 @@ urlpatterns = [
         name="document_detail",
     ),
     path(
+        "<uuid:pk>/download/",
+        views.download_signed_document,
+        name="download_signed_document",
+    ),
+    path(
         "<uuid:pk>/audit/",
         views.AuditTrailView.as_view(),
         name="audit_trail",

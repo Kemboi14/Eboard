@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DetailView, ListView, UpdateView, View
 
 from apps.accounts.models import User
+from apps.accounts.mixins import BranchOrganizationFilterMixin
 
 from .forms import (
     DiscussionForumForm,
@@ -38,7 +39,7 @@ from .models import (
 )
 
 
-class ForumListView(LoginRequiredMixin, ListView):
+class ForumListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
     """List all discussion forums"""
 
     model = DiscussionForum
@@ -47,10 +48,16 @@ class ForumListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         user = self.request.user
+        queryset = DiscussionForum.objects.select_related("branch", "branch__organization")
+
+        # Organization and branch filtering
+        queryset = self.filter_queryset_by_branch(queryset)
+
+        # Role-based filtering within branch context
         if user.role in ["company_secretary", "it_administrator"]:
-            return DiscussionForum.objects.all().order_by("order", "name")
+            return queryset.filter(is_active=True).order_by("order", "name")
         else:
-            return DiscussionForum.objects.filter(
+            return queryset.filter(
                 access_level="public", is_active=True
             ).order_by("order", "name")
 

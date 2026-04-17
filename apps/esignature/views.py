@@ -1679,6 +1679,85 @@ class OTPVerifyAPIView(APIView):
         )
 
 
+@login_required
+def download_signed_document(request, pk):
+    """
+    UI endpoint for downloading signed documents
+    GET /esignature/<pk>/download/
+    """
+    document = get_object_or_404(SignableDocument, pk=pk)
+    dl_type = request.GET.get("type", "signed")
+
+    # Access control
+    if not _can_view_document(request.user, document):
+        messages.error(request, "You do not have access to this document.")
+        return redirect("esignature:document_list")
+
+    if dl_type == "original":
+        if not _can_manage_document(request.user, document):
+            messages.error(request, "Only document managers can download the original file.")
+            return redirect("esignature:document_detail", pk=pk)
+        file_field = document.original_file
+    else:
+        # Signed file: only available once fully signed
+        if document.status != SignableDocument.STATUS_FULLY_SIGNED:
+            messages.error(request, "The signed document is not yet available.")
+            return redirect("esignature:document_detail", pk=pk)
+        # Check download permission
+        can_dl = _can_manage_document(request.user, document)
+        if not can_dl:
+            if document.signers.filter(user=request.user).exists():
+                can_dl = True
+            elif document.viewers.filter(
+                user=request.user, can_download=True
+            ).exists():
+                can_dl = True
+        if not can_dl:
+            messages.error(request, "You do not have download permission for this document.")
+            return redirect("esignature:document_detail", pk=pk)
+        file_field = document.signed_file
+
+    if not file_field:
+        messages.error(request, "File not found.")
+        return redirect("esignature:document_detail", pk=pk)
+
+    # Record download in audit log
+    _record_audit(
+        document=document,
+        action=ESignatureAuditLog.ACTION_DOWNLOAD,
+        request=request,
+        detail=f"{dl_type.capitalize()} file downloaded by {request.user.email}",
+    )
+
+    # Integrity check for original
+    if dl_type == "original" and document.original_hash:
+        if not document.verify_original_integrity():
+            _record_audit(
+                document=document,
+                action=ESignatureAuditLog.ACTION_TAMPER_DETECTED,
+                request=request,
+                detail="Tampering detected during download integrity check",
+            )
+            logger.critical(
+                "INTEGRITY FAILURE: Document %s hash mismatch on download",
+                document.reference_number,
+            )
+
+    try:
+        file_field.open("rb")
+        response = FileResponse(
+            file_field,
+            content_type="application/pdf",
+            as_attachment=True,
+            filename=os.path.basename(file_field.name),
+        )
+        return response
+    except Exception as exc:
+        logger.error("File serve failed for %s: %s", document.pk, exc)
+        messages.error(request, "File could not be retrieved.")
+        return redirect("esignature:document_detail", pk=pk)
+
+
 class DocumentDownloadAPIView(APIView):
     """
     GET /api/esignature/documents/<pk>/download/?type=signed|original

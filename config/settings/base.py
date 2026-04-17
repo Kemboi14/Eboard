@@ -1,6 +1,14 @@
-from pathlib import Path
+"""
+Django settings for Enwealth project.
+"""
 
+import os
+from pathlib import Path
 from decouple import Csv, config
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 SECRET_KEY = config("SECRET_KEY")
@@ -39,6 +47,10 @@ INSTALLED_APPS = [
     "apps.organization",
     "apps.calendar",
     "apps.recordings",
+    "apps.messaging",
+    "apps.survey",
+    "apps.api",
+    "apps.accessibility",
 ]
 
 # ---------------------------------------------------------------------------
@@ -114,13 +126,31 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME", default="enwealth_eboard"),
-        "USER": config("DB_USER", default="enwealth_user"),
-        "PASSWORD": config("DB_PASSWORD"),
-        "HOST": config("DB_HOST", default="localhost"),
-        "PORT": config("DB_PORT", default="5432"),
+        "NAME": os.environ.get("DB_NAME", "enwealth"),
+        "USER": os.environ.get("DB_USER", "postgres"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", "postgres"),
+        "HOST": os.environ.get("DB_HOST", "localhost"),
+        "PORT": os.environ.get("DB_PORT", "5432"),
     }
 }
+
+# External API Configuration
+# OpenAI API for transcription and AI features
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_ORGANIZATION = os.environ.get("OPENAI_ORGANIZATION", "")
+
+# Zoom API for meeting integration
+ZOOM_API_KEY = os.environ.get("ZOOM_API_KEY", "")
+ZOOM_API_SECRET = os.environ.get("ZOOM_API_SECRET", "")
+
+# Microsoft Teams API for meeting integration
+TEAMS_CLIENT_ID = os.environ.get("TEAMS_CLIENT_ID", "")
+TEAMS_CLIENT_SECRET = os.environ.get("TEAMS_CLIENT_SECRET", "")
+TEAMS_TENANT_ID = os.environ.get("TEAMS_TENANT_ID", "")
+
+# Language Settings
+DEFAULT_LANGUAGE = os.environ.get("DEFAULT_LANGUAGE", "en")
+SUPPORTED_LANGUAGES = ["en", "fr", "sw", "ar", "pt"]
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
@@ -171,7 +201,7 @@ try:
 except ImportError:
     pass
 
-SESSION_COOKIE_AGE = config("SESSION_COOKIE_AGE", default=3600, cast=int)
+SESSION_COOKIE_AGE = config("SESSION_COOKIE_AGE", default=180, cast=int)  # 3 minutes
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 # CSRF Settings - temporarily disabled for development

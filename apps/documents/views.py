@@ -18,7 +18,7 @@ from apps.accounts.models import User
 from .models import (
     Document, DocumentCategory, DocumentAccess, DocumentActivity, DocumentVersion,
     DocumentComment, DocumentTag, DocumentTagging, DocumentShare, DocumentWorkflow,
-    DocumentWorkflowAction
+    DocumentWorkflowAction, RetentionPolicy, ArchiveRecord
 )
 from .forms import (
     DocumentUploadForm, CategoryForm, DocumentSearchForm, DocumentAccessForm,
@@ -26,34 +26,58 @@ from .forms import (
 )
 from apps.accounts.decorators import role_required
 from apps.accounts.permissions import MANAGE_DOCUMENTS
+from apps.accounts.mixins import BranchOrganizationFilterMixin
 from apps.notifications.views import create_notification
 
-class DocumentListView(LoginRequiredMixin, ListView):
+class DocumentListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
     """Enhanced list view for documents with advanced search and filtering"""
     model = Document
     template_name = 'documents/document_list.html'
     context_object_name = 'documents'
     paginate_by = 12
-    
+
     def get_queryset(self):
         """Filter documents based on user role, permissions, and search"""
         user = self.request.user
         queryset = Document.objects.select_related('uploaded_by', 'category').prefetch_related('taggings__tag')
-        
+
+        # Organization and branch filtering
+        # Note: Documents may not have branch/organization fields, so we filter by access
+        branch_ids = self.get_user_branch_ids()
+
         # Base role-based filtering
         if user.role == 'it_administrator':
             # IT admins see all documents
             base_queryset = queryset
         elif user.role == 'company_secretary':
-            # Company secretaries see all published and approved documents
+            # Company secretaries see all published and approved documents in their branches
             base_queryset = queryset.filter(status__in=['published', 'approved'])
+            if branch_ids:
+                # Filter by documents accessible in user's branches
+                accessible_docs = DocumentAccess.objects.filter(
+                    user=user,
+                    permission='view',
+                    expires_at__gt=timezone.now()
+                ).values_list('document_id', flat=True)
+                base_queryset = base_queryset.filter(
+                    Q(id__in=accessible_docs) | Q(access_level='public')
+                )
         elif user.role == 'board_member':
-            # Board members see board-level documents
+            # Board members see board-level documents in their branches
             base_queryset = queryset.filter(access_level__in=['public', 'board'], status='published')
+            if branch_ids:
+                accessible_docs = DocumentAccess.objects.filter(
+                    user=user,
+                    permission='view',
+                    expires_at__gt=timezone.now()
+                ).values_list('document_id', flat=True)
+                base_queryset = base_queryset.filter(
+                    Q(id__in=accessible_docs) | Q(access_level='public')
+                )
         else:
             # Other roles see documents they have explicit access to
             accessible_docs = DocumentAccess.objects.filter(
-                user=user, 
+                user=user,
                 permission='view',
                 expires_at__gt=timezone.now()
             ).values_list('document_id', flat=True)
@@ -857,3 +881,98 @@ def document_search(request):
         'search_form': form,
         'can_manage': request.user.role in MANAGE_DOCUMENTS,
     })
+
+
+# ─── Document Retention Policy Views ─────────────────────────────────────────────
+
+class RetentionPolicyListView(LoginRequiredMixin, ListView):
+    """List all retention policies"""
+    model = RetentionPolicy
+    template_name = 'documents/retention_policies.html'
+    context_object_name = 'policies'
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.request.user.role not in MANAGE_DOCUMENTS:
+            queryset = queryset.filter(status='active')
+        return queryset
+
+
+class RetentionPolicyDetailView(LoginRequiredMixin, DetailView):
+    """View retention policy details"""
+    model = RetentionPolicy
+    template_name = 'documents/retention_policy_detail.html'
+    context_object_name = 'policy'
+
+
+class RetentionPolicyCreateView(LoginRequiredMixin, CreateView):
+    """Create a new retention policy"""
+    model = RetentionPolicy
+    template_name = 'documents/retention_policy_form.html'
+    fields = ['name', 'description', 'policy_type', 'retention_period_days', 'retention_period_years', 'retention_action', 'apply_to_categories', 'apply_to_tags', 'custom_criteria', 'apply_immediately', 'compliance_framework', 'legal_hold', 'notify_before_action', 'notify_days_before', 'notify_users']
+    success_url = reverse_lazy('documents:retention_policies')
+    
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        messages.success(self.request, 'Retention policy created successfully.')
+        return super().form_valid(form)
+
+
+class RetentionPolicyUpdateView(LoginRequiredMixin, UpdateView):
+    """Update a retention policy"""
+    model = RetentionPolicy
+    template_name = 'documents/retention_policy_form.html'
+    fields = ['name', 'description', 'policy_type', 'retention_period_days', 'retention_period_years', 'retention_action', 'apply_to_categories', 'apply_to_tags', 'custom_criteria', 'status', 'compliance_framework', 'legal_hold', 'notify_before_action', 'notify_days_before', 'notify_users']
+    success_url = reverse_lazy('documents:retention_policies')
+    
+    def form_valid(self, form):
+        if form.instance.created_by != self.request.user and self.request.user.role not in MANAGE_DOCUMENTS:
+            messages.error(self.request, "You don't have permission to edit this policy.")
+            return self.form_invalid(form)
+        messages.success(self.request, 'Retention policy updated successfully.')
+        return super().form_valid(form)
+
+
+class ArchiveRecordListView(LoginRequiredMixin, ListView):
+    """List all archive records"""
+    model = ArchiveRecord
+    template_name = 'documents/archive_records.html'
+    context_object_name = 'archives'
+    ordering = ['-archived_at']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.request.user.role not in MANAGE_DOCUMENTS:
+            queryset = queryset.filter(archived_by=self.request.user)
+        return queryset
+
+
+class ArchiveRecordDetailView(LoginRequiredMixin, DetailView):
+    """View archive record details"""
+    model = ArchiveRecord
+    template_name = 'documents/archive_record_detail.html'
+    context_object_name = 'archive'
+
+
+@login_required
+@require_POST
+def restore_document(request, pk):
+    """Restore a document from archive"""
+    archive = get_object_or_404(ArchiveRecord, pk=pk)
+    
+    if request.user.role not in MANAGE_DOCUMENTS:
+        messages.error(request, "You don't have permission to restore documents.")
+        return redirect('documents:archive_records')
+    
+    if not archive.document:
+        messages.error(request, "Original document no longer exists.")
+        return redirect('documents:archive_record_detail', pk=pk)
+    
+    archive.archive_status = 'restored'
+    archive.restored_by = request.user
+    archive.restored_at = timezone.now()
+    archive.save()
+    
+    messages.success(request, 'Document restored successfully.')
+    return redirect('documents:archive_record_detail', pk=pk)

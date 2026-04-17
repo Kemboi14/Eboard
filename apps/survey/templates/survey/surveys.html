@@ -1,0 +1,50 @@
+{% extends "base/base.html" %}
+
+{% block title %}Surveys{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Surveys</h1>
+        {% if user.role == 'it_administrator' or user.role == 'company_secretary' %}
+        <a href="{% url 'survey:survey_create' %}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+            Create Survey
+        </a>
+        {% endif %}
+    </div>
+
+    {% if surveys %}
+    <div class="grid gap-4">
+        {% for survey in surveys %}
+        <div class="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">{{ survey.title }}</h2>
+                    <p class="text-gray-600 mt-2">{{ survey.description }}</p>
+                    <div class="mt-4 flex gap-4 text-sm text-gray-500">
+                        <span>Type: {{ survey.get_survey_type_display }}</span>
+                        <span>Start: {{ survey.start_date|date:"M d, Y" }}</span>
+                        <span>End: {{ survey.end_date|date:"M d, Y" }}</span>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <a href="{% url 'survey:survey_detail' survey.pk %}" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        View
+                    </a>
+                    {% if survey.status == 'active' %}
+                    <a href="{% url 'survey:submit_survey_response' survey.pk %}" class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">
+                        Respond
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <p class="text-gray-500">No surveys available at this time.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

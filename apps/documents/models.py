@@ -529,3 +529,133 @@ class DocumentWorkflowAction(models.Model):
     
     def __str__(self):
         return f"{self.actor.get_full_name()} - {self.get_action_type_display()} - {self.workflow.document.title}"
+
+
+class RetentionPolicy(models.Model):
+    """Document retention policies for compliance"""
+
+    POLICY_TYPE_CHOICES = [
+        ('category', 'By Category'),
+        ('tag', 'By Tag'),
+        ('document_type', 'By Document Type'),
+        ('custom', 'Custom Criteria'),
+    ]
+
+    ACTION_CHOICES = [
+        ('archive', 'Archive'),
+        ('delete', 'Delete'),
+        ('move_to_storage', 'Move to Long-term Storage'),
+    ]
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('active', 'Active'),
+        ('suspended', 'Suspended'),
+        ('expired', 'Expired'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Policy details
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    policy_type = models.CharField(max_length=20, choices=POLICY_TYPE_CHOICES, default='category')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    
+    # Retention period
+    retention_period_days = models.PositiveIntegerField(help_text="Number of days to retain documents")
+    retention_period_years = models.PositiveIntegerField(default=0, help_text="Number of years to retain documents")
+    
+    # Action after retention period
+    retention_action = models.CharField(max_length=30, choices=ACTION_CHOICES, default='archive')
+    
+    # Criteria
+    apply_to_categories = models.ManyToManyField(DocumentCategory, blank=True, related_name='retention_policies')
+    apply_to_tags = models.JSONField(null=True, blank=True, help_text="List of tags to apply policy to")
+    custom_criteria = models.JSONField(null=True, blank=True, help_text="Custom filtering criteria")
+    
+    # Scheduling
+    apply_immediately = models.BooleanField(default=False, help_text="Apply policy immediately to existing documents")
+    next_run_date = models.DateTimeField(null=True, blank=True)
+    
+    # Compliance
+    compliance_framework = models.CharField(max_length=100, blank=True, help_text="e.g., GDPR, SOX, HIPAA")
+    legal_hold = models.BooleanField(default=False, help_text="Documents on legal hold are exempt")
+    
+    # Notifications
+    notify_before_action = models.BooleanField(default=True)
+    notify_days_before = models.PositiveIntegerField(default=30, help_text="Days before action to notify")
+    notify_users = models.ManyToManyField(User, blank=True, related_name='retention_notifications')
+    
+    # Metadata
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_retention_policies')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_applied_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        verbose_name = 'Retention Policy'
+        verbose_name_plural = 'Retention Policies'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['policy_type']),
+            models.Index(fields=['next_run_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_status_display()})"
+    
+    @property
+    def retention_period(self):
+        """Calculate total retention period in days"""
+        return (self.retention_period_years * 365) + self.retention_period_days
+
+
+class ArchiveRecord(models.Model):
+    """Record of archived documents"""
+
+    ARCHIVE_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('restored', 'Restored'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True, related_name='archive_records')
+    
+    # Archive details
+    archive_status = models.CharField(max_length=20, choices=ARCHIVE_STATUS_CHOICES, default='pending')
+    archive_location = models.CharField(max_length=500, blank=True, help_text="Storage location of archived document")
+    archive_size = models.PositiveIntegerField(null=True, blank=True, help_text="Size in bytes")
+    
+    # Policy that triggered archiving
+    retention_policy = models.ForeignKey(RetentionPolicy, on_delete=models.SET_NULL, null=True, blank=True, related_name='archive_records')
+    
+    # Restoration
+    restored_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='restored_archives')
+    restored_at = models.DateTimeField(null=True, blank=True)
+    
+    # Error handling
+    error_message = models.TextField(blank=True)
+    
+    # Metadata
+    archived_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='archived_documents')
+    archived_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True, help_text="When the archive can be permanently deleted")
+    
+    class Meta:
+        verbose_name = 'Archive Record'
+        verbose_name_plural = 'Archive Records'
+        ordering = ['-archived_at']
+        indexes = [
+            models.Index(fields=['archive_status', '-archived_at']),
+            models.Index(fields=['document']),
+            models.Index(fields=['retention_policy']),
+            models.Index(fields=['expires_at']),
+        ]
+    
+    def __str__(self):
+        return f"Archive for {self.document.title if self.document else 'Unknown Document'}"

@@ -10,6 +10,7 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from apps.accounts.decorators import role_required
 from apps.accounts.permissions import MANAGE_RISK
+from apps.accounts.mixins import BranchOrganizationFilterMixin
 
 from .forms import (
     RiskAssessmentForm,
@@ -27,10 +28,16 @@ from .models import (
     RiskIncident,
     RiskMitigation,
     RiskMonitoring,
+    ConflictOfInterestDeclaration,
+    WhistleblowerReport,
+    ComplianceRequirement,
+    ComplianceAudit,
+    BoardEvaluation,
+    DirectorEvaluation,
 )
 
 
-class RiskListView(LoginRequiredMixin, ListView):
+class RiskListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
     """List view for risks with role-based filtering and search"""
 
     model = Risk
@@ -41,13 +48,16 @@ class RiskListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         """Filter risks based on user role and permissions"""
         user = self.request.user
-        queryset = Risk.objects.all()
+        queryset = Risk.objects.select_related("risk_owner", "assigned_to", "branch")
 
-        # Role-based filtering
+        # Organization and branch filtering
+        queryset = self.filter_queryset_by_branch(queryset)
+
+        # Role-based filtering within branch context
         if user.role == "it_administrator":
             return queryset
         elif user.role == "compliance_officer":
-            return queryset  # Compliance officers see all risks
+            return queryset  # Compliance officers see all risks in their branches
         elif user.role == "executive_management":
             return queryset.filter(
                 Q(status__in=["identified", "assessed", "mitigated", "monitored"])
@@ -546,3 +556,251 @@ def risk_reports(request):
             "monthly_trends": monthly_trends,
         },
     )
+
+
+# ─── Conflict of Interest Views ─────────────────────────────────────────────────
+
+class ConflictOfInterestListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
+    """List conflict of interest declarations"""
+    model = ConflictOfInterestDeclaration
+    template_name = 'risk/coi_declarations.html'
+    context_object_name = 'declarations'
+    ordering = ['-declared_at']
+
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related("declarant")
+        user = self.request.user
+
+        # Organization and branch filtering
+        queryset = self.filter_queryset_by_branch(queryset, branch_field='branch')
+
+        if user.role not in MANAGE_RISK:
+            queryset = queryset.filter(declarant=user)
+        return queryset
+
+
+class ConflictOfInterestDetailView(LoginRequiredMixin, DetailView):
+    """View conflict of interest declaration details"""
+    model = ConflictOfInterestDeclaration
+    template_name = 'risk/coi_detail.html'
+    context_object_name = 'declaration'
+
+
+class ConflictOfInterestCreateView(LoginRequiredMixin, CreateView):
+    """Create a conflict of interest declaration"""
+    model = ConflictOfInterestDeclaration
+    template_name = 'risk/coi_form.html'
+    fields = ['title', 'description', 'conflict_type', 'related_entity', 'relationship_nature', 'severity', 'mitigation_plan']
+    success_url = reverse_lazy('risk:coi_declarations')
+    
+    def form_valid(self, form):
+        form.instance.declarant = self.request.user
+        messages.success(self.request, 'Conflict of interest declaration submitted successfully.')
+        return super().form_valid(form)
+
+
+@login_required
+@role_required('compliance_officer', 'executive_management', 'it_administrator')
+def review_coi(request, pk):
+    """Review a conflict of interest declaration"""
+    coi = get_object_or_404(ConflictOfInterestDeclaration, pk=pk)
+    
+    if request.method == 'POST':
+        coi.reviewed_by = request.user
+        coi.reviewed_at = timezone.now()
+        coi.review_notes = request.POST.get('review_notes')
+        coi.status = request.POST.get('status', 'acknowledged')
+        coi.save()
+        
+        messages.success(request, 'Conflict of interest reviewed successfully.')
+        return redirect('risk:coi_detail', pk=pk)
+    
+    return render(request, 'risk/coi_review.html', {'declaration': coi})
+
+
+# ─── Whistleblower Portal Views ───────────────────────────────────────────────
+
+class WhistleblowerReportListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
+    """List whistleblower reports"""
+    model = WhistleblowerReport
+    template_name = 'risk/whistleblower_reports.html'
+    context_object_name = 'reports'
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related("assigned_to")
+        user = self.request.user
+
+        # Organization and branch filtering
+        queryset = self.filter_queryset_by_branch(queryset, branch_field='branch')
+
+        if user.role not in MANAGE_RISK:
+            queryset = queryset.filter(assigned_to=user)
+        return queryset
+
+
+class WhistleblowerReportDetailView(LoginRequiredMixin, DetailView):
+    """View whistleblower report details"""
+    model = WhistleblowerReport
+    template_name = 'risk/whistleblower_detail.html'
+    context_object_name = 'report'
+
+
+@login_required
+def create_whistleblower_report(request):
+    """Create a whistleblower report (can be anonymous)"""
+    if request.method == 'POST':
+        # Create report
+        report = WhistleblowerReport.objects.create(
+            category=request.POST.get('category'),
+            title=request.POST.get('title'),
+            description=request.POST.get('description'),
+            is_anonymous=request.POST.get('is_anonymous') == 'on',
+            reporter_email=request.POST.get('reporter_email', ''),
+            reporter_phone=request.POST.get('reporter_phone', ''),
+            incident_date=request.POST.get('incident_date') or None,
+            location=request.POST.get('location', ''),
+            individuals_involved=request.POST.get('individuals_involved', ''),
+            severity=request.POST.get('severity', 'medium'),
+            ip_address=request.META.get('REMOTE_ADDR'),
+        )
+        
+        messages.success(request, 'Report submitted successfully. You will be contacted if follow-up is needed.')
+        return redirect('dashboard')
+    
+    return render(request, 'risk/whistleblower_form.html')
+
+
+@login_required
+@role_required('compliance_officer', 'executive_management', 'it_administrator')
+def investigate_whistleblower_report(request, pk):
+    """Investigate a whistleblower report"""
+    report = get_object_or_404(WhistleblowerReport, pk=pk)
+    
+    if request.method == 'POST':
+        report.assigned_to = request.user
+        report.investigation_notes = request.POST.get('investigation_notes')
+        report.status = request.POST.get('status', 'under_review')
+        report.save()
+        
+        messages.success(request, 'Report investigation updated successfully.')
+        return redirect('risk:whistleblower_detail', pk=pk)
+    
+    return render(request, 'risk/whistleblower_investigate.html', {'report': report})
+
+
+# ─── Compliance Views ─────────────────────────────────────────────────────────
+
+class ComplianceRequirementListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
+    """List compliance requirements"""
+    model = ComplianceRequirement
+    template_name = 'risk/compliance_requirements.html'
+    context_object_name = 'requirements'
+    ordering = ['priority', '-compliance_score']
+
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related("branch")
+        # Organization and branch filtering
+        queryset = self.filter_queryset_by_branch(queryset)
+        return queryset
+
+
+class ComplianceRequirementDetailView(LoginRequiredMixin, DetailView):
+    """View compliance requirement details"""
+    model = ComplianceRequirement
+    template_name = 'risk/compliance_detail.html'
+    context_object_name = 'requirement'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['audits'] = self.object.audits.all()
+        return context
+
+
+class ComplianceAuditListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
+    """List compliance audits"""
+    model = ComplianceAudit
+    template_name = 'risk/compliance_audits.html'
+    context_object_name = 'audits'
+    ordering = ['-audit_date']
+
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related("requirement", "requirement__branch")
+        # Organization and branch filtering
+        queryset = self.filter_queryset_by_branch(queryset, branch_field='requirement__branch')
+        return queryset
+
+
+class ComplianceAuditDetailView(LoginRequiredMixin, DetailView):
+    """View compliance audit details"""
+    model = ComplianceAudit
+    template_name = 'risk/compliance_audit_detail.html'
+    context_object_name = 'audit'
+
+
+# ─── Board Evaluation Views ───────────────────────────────────────────────────
+
+class BoardEvaluationListView(LoginRequiredMixin, BranchOrganizationFilterMixin, ListView):
+    """List board evaluations"""
+    model = BoardEvaluation
+    template_name = 'risk/board_evaluations.html'
+    context_object_name = 'evaluations'
+    ordering = ['-evaluation_period_end']
+
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related("created_by")
+        # Organization and branch filtering
+        # Board evaluations are organization-wide, so filter by created_by's branch
+        branch_ids = self.get_user_branch_ids()
+        if branch_ids:
+            queryset = queryset.filter(
+                Q(created_by__userbranchmembership__branch_id__in=branch_ids)
+            ).distinct()
+        return queryset
+
+
+class BoardEvaluationDetailView(LoginRequiredMixin, DetailView):
+    """View board evaluation details"""
+    model = BoardEvaluation
+    template_name = 'risk/board_evaluation_detail.html'
+    context_object_name = 'evaluation'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['director_evaluations'] = self.object.director_evaluations.all()
+        return context
+
+
+class BoardEvaluationCreateView(LoginRequiredMixin, CreateView):
+    """Create a board evaluation"""
+    model = BoardEvaluation
+    template_name = 'risk/board_evaluation_form.html'
+    fields = ['evaluation_type', 'evaluation_period_start', 'evaluation_period_end', 'title', 'summary', 'strengths', 'areas_for_improvement', 'recommendations', 'governance_effectiveness', 'strategic_oversight', 'risk_management', 'composition_assessment', 'independence_assessment']
+    success_url = reverse_lazy('risk:board_evaluations')
+    
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        form.instance.status = 'draft'
+        messages.success(self.request, 'Board evaluation created successfully.')
+        return super().form_valid(form)
+
+
+class DirectorEvaluationDetailView(LoginRequiredMixin, DetailView):
+    """View director evaluation details"""
+    model = DirectorEvaluation
+    template_name = 'risk/director_evaluation_detail.html'
+    context_object_name = 'evaluation'
+
+
+class DirectorEvaluationUpdateView(LoginRequiredMixin, UpdateView):
+    """Update a director evaluation"""
+    model = DirectorEvaluation
+    template_name = 'risk/director_evaluation_form.html'
+    fields = ['self_rating', 'self_assessment', 'peer_rating', 'peer_feedback', 'chair_rating', 'chair_feedback', 'overall_rating', 'overall_score', 'governance_knowledge', 'strategic_thinking', 'financial_literacy', 'industry_expertise', 'communication', 'participation', 'development_needs', 'training_recommendations']
+    
+    def get_success_url(self):
+        return reverse('risk:director_evaluation_detail', kwargs={'pk': self.object.pk})
+    
+    def form_valid(self, form):
+        messages.success(self.request, 'Director evaluation updated successfully.')
+        return super().form_valid(form)

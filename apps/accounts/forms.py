@@ -132,6 +132,13 @@ class UserProfileForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['preferred_timezone'].required = False
+        self.fields['preferred_language'].required = False
+        self.fields['bio'].required = False
+        self.fields['linkedin_url'].required = False
+        self.fields['education'].required = False
+        self.fields['experience'].required = False
+        self.fields['expertise'].required = False
+        self.fields['other_credentials'].required = False
 
     class Meta:
         model = User
@@ -143,6 +150,13 @@ class UserProfileForm(forms.ModelForm):
             "job_title",
             "profile_photo",
             "preferred_timezone",
+            "preferred_language",
+            "bio",
+            "linkedin_url",
+            "education",
+            "experience",
+            "expertise",
+            "other_credentials",
         ]
         widgets = {
             "first_name": forms.TextInput(
